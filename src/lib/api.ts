@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://192.168.1.12:8080/api';
+const API_BASE_URL = 'http://52.64.167.233:8080/api';
 
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;

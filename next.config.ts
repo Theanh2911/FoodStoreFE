@@ -2,11 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
     images: {
-        domains: ["foodstoreyenha.s3.amazonaws.com", "192.168.1.13"],
+        domains: ["foodstoreyenha.s3.amazonaws.com", "52.64.167.233"],
         remotePatterns: [
             {
                 protocol: 'http',
-                hostname: '192.168.1.13',
+                hostname: '52.64.167.233',
                 port: '8080',
                 pathname: '/**',
             },

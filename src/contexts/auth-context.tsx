@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (phoneNumber: string, password: string) => {
     try {
-      const response = await fetch("http://192.168.1.12:8080/api/auth/login", {
+      const response = await fetch("http://52.64.167.233:8080/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Call logout API
       const token = user?.token;
       if (token) {
-        await fetch("http://192.168.1.12:8080/api/auth/logout", {
+        await fetch("http://52.64.167.233:8080/api/auth/logout", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
