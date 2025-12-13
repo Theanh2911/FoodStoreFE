@@ -15,20 +15,20 @@ import { Label } from "@/components/ui/label";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 import { Product } from "@/lib/api";
 
-interface EditItemModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  product: Product | null;
-  onSubmit: (data: UpdateFormData) => void;
-}
-
-interface UpdateFormData {
+export interface UpdateFormData {
   productId: number;
   name: string;
   price: string;
   imageUrl: string;
   categoryId: number;
-  image: File | null;
+  image: File | string | null;
+}
+
+interface EditItemModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  product: Product | null;
+  onSubmit: (data: UpdateFormData) => void;
 }
 
 export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemModalProps) {

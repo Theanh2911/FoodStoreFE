@@ -4,10 +4,10 @@ import * as React from "react";
 import { DashboardNav } from "@/components/dashboard-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AddItemModal } from "@/components/add-item-modal";
-import { EditItemModal } from "@/components/edit-item-modal";
+import { AddItemModal, AddItemFormData } from "@/components/add-item-modal";
+import { EditItemModal, UpdateFormData } from "@/components/edit-item-modal";
 import { Plus, Edit, Trash2, Loader2, AlertCircle } from "lucide-react";
-import { apiService, formatPrice, getPlaceholderImage, CATEGORY_IDS, Product } from "@/lib/api";
+import { apiService, formatPrice, CATEGORY_IDS, Product } from "@/lib/api";
 import { ProductImage } from "@/components/product-image";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useAuth } from "@/contexts/auth-context";
@@ -52,7 +52,7 @@ function DoAnPageContent() {
     fetchFoodItems();
   }, []);
 
-  const handleAddItem = async (formData: any) => {
+  const handleAddItem = async (formData: AddItemFormData) => {
     try {
       console.log("📝 Form data received:", formData);
 
@@ -96,7 +96,7 @@ function DoAnPageContent() {
     setIsEditModalOpen(true);
   };
 
-  const handleEditItem = async (formData: any) => {
+  const handleEditItem = async (formData: UpdateFormData) => {
     try {
       console.log("📝 Edit form data received:", formData);
 

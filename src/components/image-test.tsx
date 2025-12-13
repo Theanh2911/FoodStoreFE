@@ -29,7 +29,7 @@ export function ImageTest() {
       }
 
       // Test if URL is reachable
-      const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+      await fetch(url, { method: 'HEAD', mode: 'no-cors' });
       setTestResults(prev => [...prev, { url, result: "✅ URL accessible", timestamp }]);
     } catch (error) {
       setTestResults(prev => [...prev, { url: url || "null", result: `❌ Error: ${error}`, timestamp }]);
@@ -123,8 +123,8 @@ export function ImageTest() {
         <div className="text-xs text-gray-600 bg-white p-2 rounded border">
           <strong>How to use:</strong>
           <br />1. Enter your image URL above
-          <br />2. Click "Test URL" to test one
-          <br />3. Click "Test All" for common test URLs
+          <br />2. Click &quot;Test URL&quot; to test one
+          <br />3. Click &quot;Test All&quot; for common test URLs
           <br />4. Check browser console for detailed logs
         </div>
       </CardContent>

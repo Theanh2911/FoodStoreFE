@@ -51,16 +51,6 @@ export function ProductImage({
     );
   }
 
-  // Lấy kích thước từ className
-  const getImageSize = (className: string) => {
-    if (className.includes('w-16')) return 64;
-    if (className.includes('w-12')) return 48;
-    if (className.includes('w-10')) return 40;
-    return 48; // default
-  };
-
-  const size = getImageSize(className);
-
   return (
       <div className={`${className} rounded-lg overflow-hidden flex-shrink-0 bg-gray-100`}>
         <img

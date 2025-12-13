@@ -141,8 +141,8 @@ export interface BankInfo {
 class ApiService {
   private isRefreshing = false;
   private failedQueue: Array<{
-    resolve: (value: any) => void;
-    reject: (reason?: any) => void;
+    resolve: (value: unknown) => void;
+    reject: (reason?: unknown) => void;
   }> = [];
 
   private async fetchWithErrorHandling<T>(
@@ -526,12 +526,12 @@ class ApiService {
             }
           }
         }
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
           console.log('Aborted');
           return;
         }
-        onError(error.message || 'Connection error');
+        onError(error instanceof Error ? error.message : 'Connection error');
 
         if (shouldReconnect) {
           reconnectTimeout = setTimeout(() => {
@@ -600,7 +600,7 @@ class ApiService {
             }
             break;
         }
-      } catch (error) {
+      } catch {
         onErrorCallback('Failed to parse server data');
       }
     };

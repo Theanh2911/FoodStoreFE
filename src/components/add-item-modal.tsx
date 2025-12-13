@@ -22,23 +22,23 @@ import {
 } from "@/components/ui/select";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 
+export interface AddItemFormData {
+  name: string;
+  price: string;
+  imageUrl: string;
+  image: File | string | null;
+}
+
 interface AddItemModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   categories: string[];
-  onSubmit: (data: FormData) => void;
-}
-
-interface FormData {
-  name: string;
-  price: string;
-  imageUrl: string;
-  image: File | null;
+  onSubmit: (data: AddItemFormData) => void;
 }
 
 export function AddItemModal({ isOpen, onClose, title, onSubmit }: AddItemModalProps) {
-  const [formData, setFormData] = React.useState<FormData>({
+  const [formData, setFormData] = React.useState<AddItemFormData>({
     name: "",
     price: "",
     imageUrl: "",

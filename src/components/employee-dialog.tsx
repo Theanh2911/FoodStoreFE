@@ -76,7 +76,7 @@ export function EmployeeDialog({ open, onOpenChange }: EmployeeDialogProps) {
     }
   };
 
-  const handleDeleteEmployee = async (id: number) => {
+  const handleDeleteEmployee = async (_id: number) => {
     alert("Chức năng xóa nhân viên chưa có API từ backend");
     // TODO: Implement when API is available
     // if (confirm("Bạn có chắc chắn muốn xóa nhân viên này?")) {
@@ -92,7 +92,7 @@ export function EmployeeDialog({ open, onOpenChange }: EmployeeDialogProps) {
     // }
   };
 
-  const handleEditEmployee = (employee: Employee) => {
+  const handleEditEmployee = (_employee: Employee) => {
     alert("Chức năng chỉnh sửa nhân viên chưa có API từ backend");
     // TODO: Implement when API is available
     // setEditingId(employee.id);

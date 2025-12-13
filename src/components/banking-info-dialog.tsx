@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Copy, Check, Edit2, Save, X, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
+import { Building2, Copy, Check, Edit2, X, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiService, BankInfo } from "@/lib/api";
 
@@ -311,7 +311,7 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
                 ))}
               </div>
             </>
-          ) : !isEditing ? (
+          ) : bankData && !isEditing ? (
             <>
               {/* Display Mode */}
               <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
