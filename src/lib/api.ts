@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://api.yenhafood.site:8080/api';
+const API_BASE_URL = 'https://api.yenhafood.site/api';
 
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
