@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (phoneNumber: string, password: string) => {
     try {
-      const response = await fetch("http://api.yenhafood.site/api/auth/login", {
+      const response = await fetch("https://api.yenhafood.site/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Call logout API
       const token = user?.token;
       if (token) {
-        await fetch("http://api.yenhafood.site:8080/api/auth/logout", {
+        await fetch("https://api.yenhafood.site/api/auth/logout", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
