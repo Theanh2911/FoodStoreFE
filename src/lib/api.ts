@@ -528,11 +528,12 @@ class ApiService {
                 console.log('SSE: ✅ PROCESSING - event:', currentEvent, 'dataLength:', currentData.length);
                 processSSEMessage(currentEvent, currentData, currentOrders, onData, onError);
                 console.log('SSE: ✅ DONE processing, resetting...');
-                currentEvent = '';
-                currentData = '';
               } else {
                 console.log('SSE: ❌ SKIPPING - event:', JSON.stringify(currentEvent), 'hasData:', !!currentData);
               }
+              // ALWAYS reset after empty line to avoid stale data
+              currentEvent = '';
+              currentData = '';
             }
           }
         }
