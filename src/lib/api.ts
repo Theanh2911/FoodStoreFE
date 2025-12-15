@@ -434,8 +434,9 @@ class ApiService {
   ): () => void {
     let currentOrders: Order[] = [];
     let controller: AbortController | null = null;
-    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
     let shouldReconnect = true;
+    const debugSse = process.env.NEXT_PUBLIC_DEBUG_SSE === '1';
 
     const connect = async (isRetry: boolean = false) => {
       try {
@@ -490,50 +491,63 @@ class ApiService {
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        // IMPORTANT: These must persist across reader chunks. SSE frames can be split arbitrarily.
+        let currentEvent = '';
+        let currentData = '';
 
         if (!reader) {
           throw new Error('Response body is not readable');
         }
 
-        console.log('SSE: Starting to read stream...');
+        if (debugSse) console.log('SSE: Starting to read stream...');
         while (true) {
           const { done, value } = await reader.read();
           
           if (done) {
-            console.log('Disconnected ');
+            if (debugSse) console.log('Disconnected ');
             break;
           }
 
           buffer += decoder.decode(value, { stream: true });
 
+          // Split by LF; we also normalize CRLF by stripping trailing '\r' per-line.
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
 
-          let currentEvent = '';
-          let currentData = '';
-
           for (const line of lines) {
-            const trimmedLine = line.trim();
-            console.log('SSE line:', JSON.stringify(line), 'trimmed:', JSON.stringify(trimmedLine));
+            const normalizedLine = line.endsWith('\r') ? line.slice(0, -1) : line;
+            const trimmedLine = normalizedLine.trim();
+            if (debugSse) console.log('SSE line:', JSON.stringify(normalizedLine), 'trimmed:', JSON.stringify(trimmedLine));
             
+            // Ignore SSE comments/keep-alives
+            if (trimmedLine.startsWith(':')) {
+              continue;
+            }
+
             if (trimmedLine.startsWith('event:')) {
               currentEvent = trimmedLine.substring(6).trim();
-              console.log('SSE: SET currentEvent =', JSON.stringify(currentEvent));
+              if (debugSse) console.log('SSE: SET currentEvent =', JSON.stringify(currentEvent));
             } else if (trimmedLine.startsWith('data:')) {
-              currentData = trimmedLine.substring(5).trim();
-              console.log('SSE: SET currentData =', currentData.substring(0, 50) + '...');
+              // Per SSE spec, after ":" there may be one optional leading space.
+              const nextChunk = trimmedLine.substring(5).replace(/^ /, '');
+              currentData = currentData ? `${currentData}\n${nextChunk}` : nextChunk;
+              if (debugSse) console.log('SSE: APPEND currentData =', currentData.substring(0, 50) + '...');
             } else if (trimmedLine === '') {
-              console.log('SSE: Empty line. BEFORE processing - currentEvent:', JSON.stringify(currentEvent), 'hasData:', !!currentData);
-              if (currentData && currentEvent) {
-                console.log('SSE: ✅ PROCESSING - event:', currentEvent, 'dataLength:', currentData.length);
-                processSSEMessage(currentEvent, currentData, currentOrders, onData, onError);
-                console.log('SSE: ✅ DONE processing, resetting...');
+              if (debugSse) console.log('SSE: Empty line. BEFORE processing - currentEvent:', JSON.stringify(currentEvent), 'hasData:', !!currentData);
+              // Blank line indicates end of an SSE "message".
+              // If server didn't send an explicit event type, default to 'message'.
+              if (currentData) {
+                const eventTypeToProcess = currentEvent || 'message';
+                if (debugSse) console.log('SSE: ✅ PROCESSING - event:', eventTypeToProcess, 'dataLength:', currentData.length);
+                processSSEMessage(eventTypeToProcess, currentData, currentOrders, onData, onError);
+                if (debugSse) console.log('SSE: ✅ DONE processing, resetting...');
+                // Only reset after successful processing
+                currentEvent = '';
+                currentData = '';
               } else {
-                console.log('SSE: ❌ SKIPPING - event:', JSON.stringify(currentEvent), 'hasData:', !!currentData);
+                if (debugSse) console.log('SSE: ❌ SKIPPING - event:', JSON.stringify(currentEvent), 'hasData:', !!currentData, '(keeping for next line)');
+                // Don't reset - keep accumulating until we have both event and data
               }
-              // ALWAYS reset after empty line to avoid stale data
-              currentEvent = '';
-              currentData = '';
             }
           }
         }
@@ -561,6 +575,7 @@ class ApiService {
       onErrorCallback: (error: string) => void
     ) => {
       try {
+        // Server "connected" message may be plain text (non-JSON).
         if (data === 'Connected to order updates') {
           return;
         }
