@@ -480,13 +480,12 @@ class ApiService {
 
         onConnect?.();
 
-        this.getAllOrders().then(result => {
-          if (!result.error) {
-            console.log(result.data.length, 'orders');
-            currentOrders = result.data;
-            onData(currentOrders);
-          }
-        });
+        const initialOrders = await this.getAllOrders();
+        if (!initialOrders.error) {
+          console.log(initialOrders.data.length, 'orders loaded initially');
+          currentOrders = initialOrders.data;
+          onData(currentOrders);
+        }
 
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
@@ -496,6 +495,7 @@ class ApiService {
           throw new Error('Response body is not readable');
         }
 
+        console.log('SSE: Starting to read stream...');
         while (true) {
           const { done, value } = await reader.read();
           
@@ -583,7 +583,6 @@ class ApiService {
                 currentOrders[existingIndex] = eventData;
                 onDataCallback([...currentOrders]);
               } else {
-                console.warn('Unknown order:', eventData.orderId);
               }
             }
             break;

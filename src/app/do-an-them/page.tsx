@@ -54,28 +54,22 @@ function DoAnThemPageContent() {
 
   const handleAddItem = async (formData: AddItemFormData) => {
     try {
-      console.log("📝 Form data received:", formData);
+      console.log("data received", formData);
 
-      // Prepare data for API call
       const productData = {
         name: formData.name,
-        price: parseFloat(formData.price.replace(/,/g, '')), // Remove commas and convert to number
+        price: parseFloat(formData.price.replace(/,/g, '')),
         categoryId: CATEGORY_IDS.ADDITIONAL,
-        image: formData.image || formData.imageUrl || "", // Use uploaded file or image URL
+        image: formData.image || formData.imageUrl || "",
       };
 
-      console.log("🔄 Sending to API:", productData);
-
-      // Call the backend API to add the product
       const addResult = await apiService.addProduct(productData);
       
       if (addResult.error) {
-        console.error("❌ Failed to add product:", addResult.error);
+        console.error("cannot add product", addResult.error);
         alert(`Lỗi khi thêm món phụ: ${addResult.error}`);
         return;
       }
-
-      console.log("✅ Product added successfully:", addResult.data);
       alert("Đã thêm món phụ mới thành công!");
 
       // Refresh the product list from backend
@@ -86,7 +80,6 @@ function DoAnThemPageContent() {
       }
 
     } catch (error) {
-      console.error("💥 Error adding item:", error);
       alert("Có lỗi xảy ra khi thêm món phụ. Vui lòng thử lại.");
     }
   };
@@ -98,7 +91,6 @@ function DoAnThemPageContent() {
 
   const handleEditItem = async (formData: UpdateFormData) => {
     try {
-      console.log("📝 Edit form data received:", formData);
 
       const productData = {
         productId: formData.productId,
@@ -113,12 +105,10 @@ function DoAnThemPageContent() {
       const updateResult = await apiService.updateProduct(formData.productId, productData);
       
       if (updateResult.error) {
-        console.error("❌ Failed to update product:", updateResult.error);
         alert(`Lỗi khi cập nhật món phụ: ${updateResult.error}`);
         return;
       }
 
-      console.log("✅ Product updated successfully:", updateResult.data);
       alert("Đã cập nhật món phụ thành công!");
 
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.ADDITIONAL);
@@ -131,7 +121,6 @@ function DoAnThemPageContent() {
       setEditingProduct(null);
 
     } catch (error) {
-      console.error("💥 Error updating item:", error);
       alert("Có lỗi xảy ra khi cập nhật món phụ. Vui lòng thử lại.");
     }
   };
