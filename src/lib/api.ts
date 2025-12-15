@@ -513,21 +513,24 @@ class ApiService {
           let currentData = '';
 
           for (const line of lines) {
-            console.log('SSE line:', JSON.stringify(line));
+            const trimmedLine = line.trim();
+            console.log('SSE line:', JSON.stringify(line), 'trimmed:', JSON.stringify(trimmedLine));
             
-            if (line.startsWith('event:')) {
-              currentEvent = line.substring(6).trim();
+            if (trimmedLine.startsWith('event:')) {
+              currentEvent = trimmedLine.substring(6).trim();
               console.log('SSE: Captured event type:', currentEvent);
-            } else if (line.startsWith('data:')) {
-              currentData = line.substring(5).trim();
+            } else if (trimmedLine.startsWith('data:')) {
+              currentData = trimmedLine.substring(5).trim();
               console.log('SSE: Captured data:', currentData.substring(0, 50) + '...');
-            } else if (line === '' || line === '\r') {
-              console.log('SSE: Empty line detected, currentData:', !!currentData);
-              if (currentData) {
+            } else if (trimmedLine === '') {
+              console.log('SSE: Empty line detected, currentEvent:', currentEvent, 'currentData:', !!currentData);
+              if (currentData && currentEvent) {
                 console.log('SSE: Calling processSSEMessage with event:', currentEvent);
                 processSSEMessage(currentEvent, currentData, currentOrders, onData, onError);
                 currentEvent = '';
                 currentData = '';
+              } else {
+                console.log('SSE: Skipping empty line (no event or no data)');
               }
             }
           }
@@ -605,7 +608,9 @@ class ApiService {
             }
             break;
         }
-      } catch {
+      } catch (error) {
+        console.error('SSE processSSEMessage ERROR:', error);
+        console.error('Event type:', eventType, 'Data:', data.substring(0, 100));
         onErrorCallback('Failed to parse server data');
       }
     };
