@@ -99,12 +99,17 @@ export interface OrderItem {
   note: string | null;
 }
 
+export type OrderTimeValue =
+  | string
+  | [number, number, number, number, number, number]
+  | [number, number, number, number, number, number, number];
+
 export interface Order {
   orderId: number;
   customerName: string | null;
   tableNumber: number;
   totalAmount: number;
-  orderTime: string;
+  orderTime: OrderTimeValue;
   status: string;
   items: OrderItem[];
 }
@@ -436,7 +441,7 @@ class ApiService {
     let controller: AbortController | null = null;
     let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
     let shouldReconnect = true;
-    const debugSse = process.env.NEXT_PUBLIC_DEBUG_SSE === '1';
+    const tag = '[SSE orders]';
 
     const connect = async (isRetry: boolean = false) => {
       try {
@@ -451,25 +456,27 @@ class ApiService {
         if (token) {
           headers['Authorization'] = `Bearer ${token}`;
         } else {
-          console.log('Can not connect to SSE: No auth token found');
+          console.log(`${tag} no auth token found (will still try connect)`);
         }
 
+        console.log(`${tag} connecting... retry=${isRetry}`);
         const response = await fetch(`${API_BASE_URL}/orders/stream`, {
           method: 'GET',
           headers,
           signal: controller.signal,
         });
+        console.log(`${tag} connected response`, { status: response.status, ok: response.ok });
 
         // Handle 401 Unauthorized - Token expired
         if (response.status === 401 && !isRetry) {
-          console.log('SSE auth failed, attempting token refresh...');
+          console.log(`${tag} auth failed (401), attempting token refresh...`);
           const refreshSuccess = await refreshAuthToken();
           
           if (refreshSuccess) {
-            console.log('Token refreshed, reconnecting SSE...');
+            console.log(`${tag} token refreshed, reconnecting...`);
             return connect(true);
           } else {
-            console.error('Token refresh failed, logging out...');
+            console.error(`${tag} token refresh failed, logging out...`);
             this.handleAuthFailure();
             return;
           }
@@ -483,9 +490,12 @@ class ApiService {
 
         const initialOrders = await this.getAllOrders();
         if (!initialOrders.error) {
-          console.log(initialOrders.data.length, 'orders loaded initially');
+          const lastId = initialOrders.data?.[initialOrders.data.length - 1]?.orderId;
+          console.log(`${tag} initial orders loaded`, { count: initialOrders.data.length, lastId });
           currentOrders = initialOrders.data;
           onData(currentOrders);
+        } else {
+          console.warn(`${tag} initial orders load failed`, initialOrders.error);
         }
 
         const reader = response.body?.getReader();
@@ -499,12 +509,12 @@ class ApiService {
           throw new Error('Response body is not readable');
         }
 
-        if (debugSse) console.log('SSE: Starting to read stream...');
+        console.log(`${tag} start reading stream...`);
         while (true) {
           const { done, value } = await reader.read();
           
           if (done) {
-            if (debugSse) console.log('Disconnected ');
+            console.log(`${tag} stream ended (done=true)`);
             break;
           }
 
@@ -517,7 +527,6 @@ class ApiService {
           for (const line of lines) {
             const normalizedLine = line.endsWith('\r') ? line.slice(0, -1) : line;
             const trimmedLine = normalizedLine.trim();
-            if (debugSse) console.log('SSE line:', JSON.stringify(normalizedLine), 'trimmed:', JSON.stringify(trimmedLine));
             
             // Ignore SSE comments/keep-alives
             if (trimmedLine.startsWith(':')) {
@@ -526,41 +535,35 @@ class ApiService {
 
             if (trimmedLine.startsWith('event:')) {
               currentEvent = trimmedLine.substring(6).trim();
-              if (debugSse) console.log('SSE: SET currentEvent =', JSON.stringify(currentEvent));
             } else if (trimmedLine.startsWith('data:')) {
               // Per SSE spec, after ":" there may be one optional leading space.
               const nextChunk = trimmedLine.substring(5).replace(/^ /, '');
               currentData = currentData ? `${currentData}\n${nextChunk}` : nextChunk;
-              if (debugSse) console.log('SSE: APPEND currentData =', currentData.substring(0, 50) + '...');
             } else if (trimmedLine === '') {
-              if (debugSse) console.log('SSE: Empty line. BEFORE processing - currentEvent:', JSON.stringify(currentEvent), 'hasData:', !!currentData);
               // Blank line indicates end of an SSE "message".
               // If server didn't send an explicit event type, default to 'message'.
               if (currentData) {
                 const eventTypeToProcess = currentEvent || 'message';
-                if (debugSse) console.log('SSE: ✅ PROCESSING - event:', eventTypeToProcess, 'dataLength:', currentData.length);
                 processSSEMessage(eventTypeToProcess, currentData, currentOrders, onData, onError);
-                if (debugSse) console.log('SSE: ✅ DONE processing, resetting...');
                 // Only reset after successful processing
                 currentEvent = '';
                 currentData = '';
-              } else {
-                if (debugSse) console.log('SSE: ❌ SKIPPING - event:', JSON.stringify(currentEvent), 'hasData:', !!currentData, '(keeping for next line)');
-                // Don't reset - keep accumulating until we have both event and data
               }
             }
           }
         }
       } catch (error: unknown) {
         if (error instanceof Error && error.name === 'AbortError') {
-          console.log('Aborted');
+          console.log(`${tag} aborted`);
           return;
         }
-        onError(error instanceof Error ? error.message : 'Connection error');
+        const message = error instanceof Error ? error.message : 'Connection error';
+        console.error(`${tag} connection error`, message);
+        onError(message);
 
         if (shouldReconnect) {
           reconnectTimeout = setTimeout(() => {
-            console.log('Reconnect');
+            console.log(`${tag} reconnecting in 3s...`);
             connect();
           }, 3000);
         }
@@ -577,6 +580,7 @@ class ApiService {
       try {
         // Server "connected" message may be plain text (non-JSON).
         if (data === 'Connected to order updates') {
+          console.log(`${tag} server says: Connected to order updates`);
           return;
         }
 
@@ -586,6 +590,7 @@ class ApiService {
 
           case 'order-created':
             if (Array.isArray(eventData)) {
+              console.log(`${tag} event order-created (array)`, { count: eventData.length });
               currentOrders = eventData;
               onDataCallback(currentOrders);
             } else if (eventData && typeof eventData === 'object' && eventData.orderId) {
@@ -595,18 +600,21 @@ class ApiService {
               } else {
                 currentOrders = [...currentOrders, eventData];
               }
+              console.log(`${tag} event order-created`, { orderId: eventData.orderId, total: currentOrders.length });
               onDataCallback([...currentOrders]);
             }
             break;
 
           case 'order-updated':
             if (Array.isArray(eventData)) {
+              console.log(`${tag} event order-updated (array)`, { count: eventData.length });
               currentOrders = eventData;
               onDataCallback(currentOrders);
             } else if (eventData && typeof eventData === 'object' && eventData.orderId) {
               const existingIndex = currentOrders.findIndex(order => order.orderId === eventData.orderId);
               if (existingIndex >= 0) {
                 currentOrders[existingIndex] = eventData;
+                console.log(`${tag} event order-updated`, { orderId: eventData.orderId, total: currentOrders.length });
                 onDataCallback([...currentOrders]);
               } else {
               }
@@ -615,19 +623,20 @@ class ApiService {
 
           case 'connected':
             if (Array.isArray(eventData)) {
+              console.log(`${tag} event connected (array)`, { count: eventData.length });
               onDataCallback(eventData);
             }
             break;
 
           default:
             if (Array.isArray(eventData)) {
+              console.log(`${tag} event ${eventType} (array)`, { count: eventData.length });
               onDataCallback(eventData);
             }
             break;
         }
       } catch (error) {
-        console.error('SSE processSSEMessage ERROR:', error);
-        console.error('Event type:', eventType, 'Data:', data.substring(0, 100));
+        console.error(`${tag} process message error`, { eventType, dataPreview: data.substring(0, 150) }, error);
         onErrorCallback('Failed to parse server data');
       }
     };
@@ -641,7 +650,7 @@ class ApiService {
       }
       if (controller) {
         controller.abort();
-        console.log('SSE closed');
+        console.log(`${tag} closed`);
       }
     };
   }
@@ -662,12 +671,27 @@ export const getPlaceholderImage = (categoryName: string): string => {
   return placeholders[categoryName.toLowerCase()] || '🍽️';
 };
 
-export const parseOrderTime = (dateTimeString: string): Date => {
+export const parseOrderTime = (orderTime: OrderTimeValue): Date => {
   try {
-    const dateWithTimezone = dateTimeString.includes('T') && !dateTimeString.includes('Z') && !dateTimeString.includes('+')
-      ? `${dateTimeString}+07:00`
-      : dateTimeString;
-    
+    // Backend may return LocalDateTime array: [yyyy, MM, dd, HH, mm, ss, nano]
+    if (Array.isArray(orderTime)) {
+      const [year, month, day, hour, minute, second, nano] = orderTime;
+      const ms = typeof nano === 'number' ? Math.floor(nano / 1_000_000) : 0;
+      const date = new Date(year, (month ?? 1) - 1, day ?? 1, hour ?? 0, minute ?? 0, second ?? 0, ms);
+
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid orderTime array:', orderTime);
+        return new Date();
+      }
+      return date;
+    }
+
+    const dateTimeString = orderTime;
+    const dateWithTimezone =
+      dateTimeString.includes('T') && !dateTimeString.includes('Z') && !dateTimeString.includes('+')
+        ? `${dateTimeString}+07:00`
+        : dateTimeString;
+
     const date = new Date(dateWithTimezone);
 
     if (isNaN(date.getTime())) {
@@ -677,14 +701,14 @@ export const parseOrderTime = (dateTimeString: string): Date => {
     
     return date;
   } catch (error) {
-    console.error('Error parsing date:', dateTimeString, error);
+    console.error('Error parsing orderTime:', orderTime, error);
     return new Date();
   }
 };
 
-export const formatDateTime = (dateTimeString: string): string => {
+export const formatDateTime = (orderTime: OrderTimeValue): string => {
   try {
-    const date = parseOrderTime(dateTimeString);
+    const date = parseOrderTime(orderTime);
     return date.toLocaleString('vi-VN', {
       year: 'numeric',
       month: '2-digit',
@@ -693,7 +717,7 @@ export const formatDateTime = (dateTimeString: string): string => {
       minute: '2-digit',
     });
   } catch (error) {
-    console.error('Error formatting date:', dateTimeString, error);
+    console.error('Error formatting date:', orderTime, error);
     return 'Invalid Date';
   }
 };
