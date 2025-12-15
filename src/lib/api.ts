@@ -518,19 +518,20 @@ class ApiService {
             
             if (trimmedLine.startsWith('event:')) {
               currentEvent = trimmedLine.substring(6).trim();
-              console.log('SSE: Captured event type:', currentEvent);
+              console.log('SSE: SET currentEvent =', JSON.stringify(currentEvent));
             } else if (trimmedLine.startsWith('data:')) {
               currentData = trimmedLine.substring(5).trim();
-              console.log('SSE: Captured data:', currentData.substring(0, 50) + '...');
+              console.log('SSE: SET currentData =', currentData.substring(0, 50) + '...');
             } else if (trimmedLine === '') {
-              console.log('SSE: Empty line detected, currentEvent:', currentEvent, 'currentData:', !!currentData);
+              console.log('SSE: Empty line. BEFORE processing - currentEvent:', JSON.stringify(currentEvent), 'hasData:', !!currentData);
               if (currentData && currentEvent) {
-                console.log('SSE: Calling processSSEMessage with event:', currentEvent);
+                console.log('SSE: ✅ PROCESSING - event:', currentEvent, 'dataLength:', currentData.length);
                 processSSEMessage(currentEvent, currentData, currentOrders, onData, onError);
+                console.log('SSE: ✅ DONE processing, resetting...');
                 currentEvent = '';
                 currentData = '';
               } else {
-                console.log('SSE: Skipping empty line (no event or no data)');
+                console.log('SSE: ❌ SKIPPING - event:', JSON.stringify(currentEvent), 'hasData:', !!currentData);
               }
             }
           }
