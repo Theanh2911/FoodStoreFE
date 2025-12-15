@@ -513,12 +513,18 @@ class ApiService {
           let currentData = '';
 
           for (const line of lines) {
+            console.log('SSE line:', JSON.stringify(line));
+            
             if (line.startsWith('event:')) {
               currentEvent = line.substring(6).trim();
+              console.log('SSE: Captured event type:', currentEvent);
             } else if (line.startsWith('data:')) {
               currentData = line.substring(5).trim();
+              console.log('SSE: Captured data:', currentData.substring(0, 50) + '...');
             } else if (line === '' || line === '\r') {
+              console.log('SSE: Empty line detected, currentData:', !!currentData);
               if (currentData) {
+                console.log('SSE: Calling processSSEMessage with event:', currentEvent);
                 processSSEMessage(currentEvent, currentData, currentOrders, onData, onError);
                 currentEvent = '';
                 currentData = '';
