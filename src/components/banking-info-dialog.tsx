@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Copy, Check, Edit2, X, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
+import { Building2, Copy, Check, Edit2, X, Loader2, AlertCircle, AlertTriangle, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiService, BankInfo } from "@/lib/api";
 
@@ -22,6 +22,7 @@ interface BankingInfoDialogProps {
 
 export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps) {
   const [isEditing, setIsEditing] = React.useState(false);
+  const [isCreating, setIsCreating] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState<string | null>(null);
@@ -40,6 +41,8 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
   React.useEffect(() => {
     if (open) {
       fetchBankInfo();
+      setIsCreating(false);
+      setIsEditing(false);
     }
   }, [open]);
 
@@ -135,6 +138,59 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
     setQrCodeFile(null);
     setQrCodePreview(null);
     setIsEditing(false);
+    setIsCreating(false);
+  };
+
+  const handleStartCreate = () => {
+    setIsCreating(true);
+    setEditingInfo({
+      bankName: "",
+      accountNumber: "",
+      accountHolder: "",
+    });
+    setQrCodeFile(null);
+    setQrCodePreview(null);
+    setError(null);
+  };
+
+  const handleCreateBank = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    // Validation
+    if (!editingInfo.bankName.trim()) {
+      setError("Vui lòng nhập tên ngân hàng");
+      setIsLoading(false);
+      return;
+    }
+    if (!editingInfo.accountNumber.trim()) {
+      setError("Vui lòng nhập số tài khoản");
+      setIsLoading(false);
+      return;
+    }
+    if (!editingInfo.accountHolder.trim()) {
+      setError("Vui lòng nhập tên chủ tài khoản");
+      setIsLoading(false);
+      return;
+    }
+    
+    const result = await apiService.createBank({
+      bankName: editingInfo.bankName,
+      accountNumber: editingInfo.accountNumber,
+      accountHolder: editingInfo.accountHolder,
+      status: "ACTIVE",
+      qrCodeImage: qrCodeFile || undefined,
+    });
+    
+    if (result.error) {
+      setError(result.error);
+    } else {
+      await fetchBankInfo();
+      setIsCreating(false);
+      setQrCodeFile(null);
+      setQrCodePreview(null);
+    }
+    setIsLoading(false);
   };
 
   const handleDeactivate = async () => {
@@ -197,10 +253,10 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
               <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
               <span className="ml-2 text-gray-600">Đang tải...</span>
             </div>
-          ) : !bankData && allBanks.length === 0 ? (
+          ) : !bankData && allBanks.length === 0 && !isCreating ? (
             <Card className="bg-gray-50">
               <CardContent className="pt-6 pb-6">
-                <div className="text-center space-y-3">
+                <div className="text-center space-y-4">
                   <div className="mx-auto w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
                     <Building2 className="h-6 w-6 text-gray-400" />
                   </div>
@@ -210,10 +266,17 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
                   <p className="text-sm text-gray-500">
                     Vui lòng liên hệ quản trị viên để thêm tài khoản ngân hàng mới
                   </p>
+                  <Button 
+                    onClick={handleStartCreate} 
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Thêm tài khoản ngân hàng
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          ) : !bankData && allBanks.length > 0 ? (
+          ) : !bankData && allBanks.length > 0 && !isCreating ? (
             <>
               {/* Show all banks (including deactivated) */}
               <div className="space-y-3">
@@ -310,6 +373,94 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
                   </Card>
                 ))}
               </div>
+              
+              {/* Add New Bank Button */}
+              <Button 
+                onClick={handleStartCreate} 
+                className="w-full"
+                variant="outline"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Thêm tài khoản mới
+              </Button>
+            </>
+          ) : isCreating ? (
+            <>
+              {/* Create Mode */}
+              <Card>
+                <CardContent className="pt-4 space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="newBankName">Ngân hàng *</Label>
+                    <Input
+                      id="newBankName"
+                      value={editingInfo.bankName}
+                      onChange={(e) => setEditingInfo({ ...editingInfo, bankName: e.target.value })}
+                      placeholder="Nhập tên ngân hàng (VD: Vietcombank)"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="newAccountNumber">Số tài khoản *</Label>
+                    <Input
+                      id="newAccountNumber"
+                      value={editingInfo.accountNumber}
+                      onChange={(e) => setEditingInfo({ ...editingInfo, accountNumber: e.target.value })}
+                      placeholder="Nhập số tài khoản"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="newAccountHolder">Chủ tài khoản *</Label>
+                    <Input
+                      id="newAccountHolder"
+                      value={editingInfo.accountHolder}
+                      onChange={(e) => setEditingInfo({ ...editingInfo, accountHolder: e.target.value })}
+                      placeholder="Nhập tên chủ tài khoản"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="newQrCodeImage">Ảnh QR Code (tùy chọn)</Label>
+                    <Input
+                      id="newQrCodeImage"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleQrCodeChange}
+                    />
+                    {qrCodePreview && (
+                      <div className="mt-2 flex justify-center">
+                        <img 
+                          src={qrCodePreview} 
+                          alt="QR Code preview"
+                          className="max-w-full h-auto rounded-lg"
+                          style={{ maxHeight: '200px' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Create Action Buttons */}
+              <div className="flex gap-2">
+                <Button onClick={handleCreateBank} className="flex-1" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Đang tạo...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Tạo tài khoản
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" onClick={handleCancel} className="flex-1" disabled={isLoading}>
+                  <X className="h-4 w-4 mr-2" />
+                  Hủy
+                </Button>
+              </div>
             </>
           ) : bankData && !isEditing ? (
             <>
@@ -401,15 +552,25 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
                 </Card>
               )}
 
-              {/* Edit Button */}
-              <Button 
-                onClick={() => setIsEditing(true)} 
-                className="w-full"
-                variant="outline"
-              >
-                <Edit2 className="h-4 w-4 mr-2" />
-                Chỉnh sửa thông tin
-              </Button>
+              {/* Edit and Create Buttons */}
+              <div className="space-y-2">
+                <Button 
+                  onClick={() => setIsEditing(true)} 
+                  className="w-full"
+                  variant="outline"
+                >
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Chỉnh sửa thông tin
+                </Button>
+                <Button 
+                  onClick={handleStartCreate} 
+                  className="w-full"
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Thêm tài khoản mới
+                </Button>
+              </div>
             </>
           ) : (
             <>
@@ -565,6 +726,7 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
     </Dialog>
   );
 }
+
 
 
 

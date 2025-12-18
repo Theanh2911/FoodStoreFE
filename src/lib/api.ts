@@ -394,6 +394,39 @@ class ApiService {
     });
   }
 
+  async createBank(bankData: {
+    bankName: string;
+    accountNumber: string;
+    accountHolder: string;
+    status: string;
+    qrCodeImage?: File;
+  }): Promise<ApiResponse<BankInfo>> {
+    const formData = new FormData();
+    
+    // Create bank object as JSON
+    const bankInfo = {
+      bankName: bankData.bankName,
+      accountNumber: bankData.accountNumber,
+      accountHolder: bankData.accountHolder,
+      status: bankData.status,
+    };
+    
+    // Add bank info as JSON blob with correct content type
+    const bankBlob = new Blob([JSON.stringify(bankInfo)], { type: 'application/json' });
+    formData.append('bank', bankBlob);
+    
+    // Add image if provided
+    if (bankData.qrCodeImage) {
+      formData.append('qrCodeImage', bankData.qrCodeImage);
+    }
+    
+    return this.fetchWithFormData<BankInfo>(
+      `${API_BASE_URL}/banks`,
+      formData,
+      'POST'
+    );
+  }
+
   async updateBank(bankId: number, bankData: {
     bankName: string;
     accountNumber: string;
