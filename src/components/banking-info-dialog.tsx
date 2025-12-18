@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -174,6 +175,17 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
       return;
     }
     
+    // If there's an active bank, deactivate it first
+    if (bankData && bankData.status === "ACTIVE") {
+      const deactivateResult = await apiService.deactivateBank(bankData.id);
+      if (deactivateResult.error) {
+        setError(`Lỗi vô hiệu hóa tài khoản cũ: ${deactivateResult.error}`);
+        setIsLoading(false);
+        return;
+      }
+    }
+    
+    // Create new bank account
     const result = await apiService.createBank({
       bankName: editingInfo.bankName,
       accountNumber: editingInfo.accountNumber,
@@ -428,12 +440,14 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
                       onChange={handleQrCodeChange}
                     />
                     {qrCodePreview && (
-                      <div className="mt-2 flex justify-center">
-                        <img 
+                      <div className="mt-2 flex justify-center relative" style={{ height: '200px' }}>
+                        <Image 
                           src={qrCodePreview} 
                           alt="QR Code preview"
-                          className="max-w-full h-auto rounded-lg"
-                          style={{ maxHeight: '200px' }}
+                          width={200}
+                          height={200}
+                          className="max-w-full h-auto rounded-lg object-contain"
+                          unoptimized
                         />
                       </div>
                     )}
@@ -539,12 +553,13 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
                   <CardContent className="pt-6">
                     <div className="space-y-2">
                       <p className="text-sm text-gray-600 text-center">Mã QR chuyển khoản</p>
-                      <div className="flex justify-center">
-                        <img 
+                      <div className="flex justify-center relative" style={{ height: '300px' }}>
+                        <Image 
                           src={bankData.qrCodeImageUrl} 
                           alt="QR Code chuyển khoản"
-                          className="max-w-full h-auto rounded-lg"
-                          style={{ maxHeight: '300px' }}
+                          width={300}
+                          height={300}
+                          className="max-w-full h-auto rounded-lg object-contain"
                         />
                       </div>
                     </div>
@@ -616,12 +631,14 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
                       onChange={handleQrCodeChange}
                     />
                     {qrCodePreview && (
-                      <div className="mt-2 flex justify-center">
-                        <img 
+                      <div className="mt-2 flex justify-center relative" style={{ height: '200px' }}>
+                        <Image 
                           src={qrCodePreview} 
                           alt="QR Code preview"
-                          className="max-w-full h-auto rounded-lg"
-                          style={{ maxHeight: '200px' }}
+                          width={200}
+                          height={200}
+                          className="max-w-full h-auto rounded-lg object-contain"
+                          unoptimized
                         />
                       </div>
                     )}
@@ -726,6 +743,7 @@ export function BankingInfoDialog({ open, onOpenChange }: BankingInfoDialogProps
     </Dialog>
   );
 }
+
 
 
 
