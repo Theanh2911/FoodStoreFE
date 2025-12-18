@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { getPlaceholderImage } from "@/lib/api";
 
 const BACKEND_BASE_URL = "https://api.yenhafood.site";
@@ -52,14 +53,14 @@ export function ProductImage({
   }
 
   return (
-      <div className={`${className} rounded-lg overflow-hidden flex-shrink-0 bg-gray-100`}>
-        <img
+      <div className={`${className} rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 relative`}>
+        <Image
             src={processedUrl}
             alt={productName}
-            className="w-full h-full object-cover rounded-lg transition-opacity duration-300"
+            fill
+            className="object-cover rounded-lg transition-opacity duration-300"
             onError={() => setImageError(true)}
-            loading="eager"
-            style={{ display: 'block' }}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
       </div>
   );

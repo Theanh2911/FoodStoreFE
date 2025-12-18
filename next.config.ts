@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
     images: {
-        domains: ["foodstoreyenha.s3.amazonaws.com", "52.64.167.233"],
+        domains: ["foodstoreyenha.s3.amazonaws.com", "52.64.167.233", "api.yenhafood.site"],
         remotePatterns: [
             {
                 protocol: 'http',
@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
             {
                 protocol: 'https',
                 hostname: 'foodstoreyenha.s3.amazonaws.com',
+                pathname: '/**',
+            },
+            {
+                protocol: 'https',
+                hostname: 'api.yenhafood.site',
                 pathname: '/**',
             }
         ],

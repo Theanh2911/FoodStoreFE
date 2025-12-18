@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -197,17 +198,19 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
             <Label className="text-sm font-medium">Hoặc tải lên hình ảnh mới</Label>
             
             {imagePreview ? (
-              <div className="relative">
-                <img
+              <div className="relative" style={{ height: '192px' }}>
+                <Image
                   src={imagePreview}
                   alt="Preview"
-                  className="w-full h-48 object-cover rounded-lg border"
+                  fill
+                  className="object-cover rounded-lg border"
+                  unoptimized
                 />
                 <Button
                   type="button"
                   variant="destructive"
                   size="sm"
-                  className="absolute top-2 right-2"
+                  className="absolute top-2 right-2 z-10"
                   onClick={handleRemoveImage}
                 >
                   <X className="h-4 w-4" />
