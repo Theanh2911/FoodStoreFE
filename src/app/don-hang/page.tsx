@@ -342,6 +342,13 @@ function DonHangPageContent() {
                   </CardHeader>
                   
                   <CardContent className="pt-0">
+                    {/* Order Note */}
+                    {order.note && (
+                      <div className="mb-4 text-sm text-gray-600">
+                        <span className="font-medium">Ghi chú:</span> {order.note}
+                      </div>
+                    )}
+
                     {/* Order Items */}
                     <div className="space-y-2 mb-4">
                       <h4 className="font-medium text-gray-700 mb-2">Chi tiết đơn hàng:</h4>

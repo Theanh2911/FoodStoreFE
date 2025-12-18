@@ -106,6 +106,7 @@ export interface Order {
   totalAmount: number;
   orderTime: string;
   status: string;
+  note?: string | null;
   items: OrderItem[];
 }
 
