@@ -280,16 +280,25 @@ class ApiService {
     image?: File | string;
   }): Promise<ApiResponse<Product>> {
     const formData = new FormData();
-    formData.append('name', productData.name);
-    formData.append('price', productData.price.toString());
-    formData.append('categoryId', productData.categoryId.toString());
     
+    // Create product object as JSON
+    const product = {
+      name: productData.name,
+      price: productData.price,
+      categoryId: productData.categoryId,
+    };
+    
+    // Add product info as JSON blob with correct content type
+    const productBlob = new Blob([JSON.stringify(product)], { type: 'application/json' });
+    formData.append('product', productBlob);
+    
+    // Add image if provided
     if (productData.image instanceof File) {
-      formData.append('image', productData.image);
+      formData.append('imageFile', productData.image);
     }
     
     return this.fetchWithFormData<Product>(
-      `${API_BASE_URL}/menu/products/create-with-image`,
+      `${API_BASE_URL}/menu/products/create`,
       formData,
       'POST'
     );
@@ -303,16 +312,25 @@ class ApiService {
     categoryId: number;
   }): Promise<ApiResponse<Product>> {
     const formData = new FormData();
-    formData.append('name', productData.name);
-    formData.append('price', productData.price.toString());
-    formData.append('categoryId', productData.categoryId.toString());
     
+    // Create product object as JSON
+    const product = {
+      name: productData.name,
+      price: productData.price,
+      categoryId: productData.categoryId,
+    };
+    
+    // Add product info as JSON blob with correct content type
+    const productBlob = new Blob([JSON.stringify(product)], { type: 'application/json' });
+    formData.append('product', productBlob);
+    
+    // Add image if provided (note: ảnh cũ sẽ tự động xóa từ đường xóa nếu có ảnh mới)
     if (productData.image instanceof File) {
-      formData.append('image', productData.image);
+      formData.append('imageFile', productData.image);
     }
     
     return this.fetchWithFormData<Product>(
-      `${API_BASE_URL}/menu/products/update-with-image/${productId}`,
+      `${API_BASE_URL}/menu/products/update/${productId}`,
       formData,
       'PUT'
     );
