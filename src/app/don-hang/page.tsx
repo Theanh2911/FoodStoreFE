@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, AlertCircle, Clock, CheckCircle, Filter, Check, ChefHat, CreditCard, Wifi, WifiOff } from "lucide-react";
+import { Loader2, AlertCircle, Clock, CheckCircle, Filter, Check, ChefHat, CreditCard, Wifi, WifiOff, PartyPopper } from "lucide-react";
 import { apiService, formatPrice, Order, formatDateTime, parseOrderTime } from "@/lib/api";
 import { ProtectedRoute } from "@/components/protected-route";
 
@@ -33,6 +33,12 @@ function DonHangPageContent() {
     actionText: string;
   }>({ isOpen: false, orderId: null, currentStatus: "", newStatus: "", actionText: "" });
   const [isUpdatingStatus, setIsUpdatingStatus] = React.useState(false);
+  const [paymentSuccessModal, setPaymentSuccessModal] = React.useState<{
+    isOpen: boolean;
+    order: Order | null;
+  }>({ isOpen: false, order: null });
+  const previousOrdersRef = React.useRef<Order[]>([]);
+  const manualUpdateOrderIdsRef = React.useRef<Set<number>>(new Set());
 
   React.useEffect(() => {
     setIsLoading(true);
@@ -84,6 +90,39 @@ function DonHangPageContent() {
         setFilteredOrders(orders);
     }
   }, [orders, activeFilter]);
+
+  // Detect SERVED → PAID transitions for payment success modal
+  React.useEffect(() => {
+    if (previousOrdersRef.current.length === 0) {
+      previousOrdersRef.current = orders;
+      return;
+    }
+
+    // Check each current order for status change
+    orders.forEach(currentOrder => {
+      const previousOrder = previousOrdersRef.current.find(
+        prev => prev.orderId === currentOrder.orderId
+      );
+
+      // Detect SERVED → PAID transition (online payment)
+      if (
+        previousOrder &&
+        previousOrder.status === "SERVED" &&
+        currentOrder.status === "PAID" &&
+        !manualUpdateOrderIdsRef.current.has(currentOrder.orderId)
+      ) {
+        // Show payment success modal
+        setPaymentSuccessModal({
+          isOpen: true,
+          order: currentOrder,
+        });
+      }
+    });
+
+    // Clear manual update tracking after processing
+    manualUpdateOrderIdsRef.current.clear();
+    previousOrdersRef.current = orders;
+  }, [orders]);
 
   const getStatusBadge = (status: string) => {
     switch (status.toUpperCase()) {
@@ -148,23 +187,26 @@ function DonHangPageContent() {
 
   const confirmStatusChange = async () => {
     if (!confirmDialog.orderId) return;
-    
+
     setIsUpdatingStatus(true);
     const result = await apiService.updateOrderStatus(confirmDialog.orderId, confirmDialog.newStatus);
-    
+
     if (result.error) {
       setError(`Lỗi cập nhật trạng thái: ${result.error}`);
     } else {
+      // Mark this order as manually updated to prevent payment success modal
+      manualUpdateOrderIdsRef.current.add(confirmDialog.orderId);
+
       // Update the orders list with the new status
-      setOrders(prevOrders => 
-        prevOrders.map(order => 
-          order.orderId === confirmDialog.orderId 
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order.orderId === confirmDialog.orderId
             ? { ...order, status: confirmDialog.newStatus }
             : order
         )
       );
     }
-    
+
     setIsUpdatingStatus(false);
     setConfirmDialog({ isOpen: false, orderId: null, currentStatus: "", newStatus: "", actionText: "" });
   };
@@ -183,7 +225,7 @@ function DonHangPageContent() {
         </Button>
       );
     }
-    
+
     if (order.status === "SERVED") {
       return (
         <Button
@@ -197,14 +239,14 @@ function DonHangPageContent() {
         </Button>
       );
     }
-    
+
     return null;
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNav />
-      
+
       <main className="container mx-auto p-3 sm:p-4 lg:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -285,8 +327,8 @@ function DonHangPageContent() {
             <div className="flex items-center">
               <AlertCircle className="h-8 w-8 text-red-600" />
               <span className="ml-2 text-red-600">
-                {connectionStatus === "disconnected" 
-                  ? "Mất kết nối với server. Đang thử kết nối lại..." 
+                {connectionStatus === "disconnected"
+                  ? "Mất kết nối với server. Đang thử kết nối lại..."
                   : `Lỗi: ${error}`
                 }
               </span>
@@ -294,9 +336,9 @@ function DonHangPageContent() {
             {connectionStatus === "disconnected" && (
               <div className="text-sm text-gray-500 text-center">
                 <p>Hệ thống sẽ tự động thử kết nối lại sau 3 giây.</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-2" 
+                <Button
+                  variant="outline"
+                  className="mt-2"
                   onClick={() => window.location.reload()}
                 >
                   Tải lại trang
@@ -311,13 +353,13 @@ function DonHangPageContent() {
           <div className="space-y-4">
             {filteredOrders.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                {activeFilter === "pending" 
-                  ? "Không có đơn hàng đang chờ nào." 
+                {activeFilter === "pending"
+                  ? "Không có đơn hàng đang chờ nào."
                   : activeFilter === "served"
-                  ? "Không có đơn hàng đã phục vụ nào."
-                  : activeFilter === "paid"
-                  ? "Không có đơn hàng đã thanh toán nào."
-                  : "Chưa có đơn hàng nào."
+                    ? "Không có đơn hàng đã phục vụ nào."
+                    : activeFilter === "paid"
+                      ? "Không có đơn hàng đã thanh toán nào."
+                      : "Chưa có đơn hàng nào."
                 }
               </div>
             ) : (
@@ -340,7 +382,7 @@ function DonHangPageContent() {
                       </div>
                     </div>
                   </CardHeader>
-                  
+
                   <CardContent className="pt-0">
                     {/* Order Note */}
                     {order.note && (
@@ -420,6 +462,77 @@ function DonHangPageContent() {
               ) : (
                 "Xác nhận"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Success Modal */}
+      <Dialog
+        open={paymentSuccessModal.isOpen}
+        onOpenChange={(open) => !open && setPaymentSuccessModal({ isOpen: false, order: null })}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <div className="rounded-full bg-green-100 p-3">
+                <CheckCircle className="h-12 w-12 text-green-600" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-2xl text-green-600">
+              Thanh toán thành công!
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Đơn hàng đã được thanh toán online
+            </DialogDescription>
+          </DialogHeader>
+
+          {paymentSuccessModal.order && (
+            <div className="space-y-4 py-4">
+              {/* Table Number */}
+              <div className="flex justify-between items-center pb-2 border-b">
+                <span className="text-gray-600 font-medium">Bàn số:</span>
+                <span className="text-lg font-bold text-gray-900">
+                  {paymentSuccessModal.order.tableNumber}
+                </span>
+              </div>
+
+              {/* Order Items */}
+              <div>
+                <h4 className="font-medium text-gray-700 mb-2">Món đã đặt:</h4>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {paymentSuccessModal.order.items.map((item) => (
+                    <div
+                      key={item.orderItemId}
+                      className="flex justify-between items-center text-sm py-1"
+                    >
+                      <span className="text-gray-600">
+                        {item.productName} <span className="text-gray-400">x {item.quantity}</span>
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {formatPrice(item.productPrice * item.quantity)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Total Amount */}
+              <div className="flex justify-between items-center pt-3 border-t-2 border-gray-200">
+                <span className="text-lg font-bold text-gray-700">Tổng cộng:</span>
+                <span className="text-2xl font-bold text-green-600">
+                  {formatPrice(calculateOrderTotal(paymentSuccessModal.order))}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="sm:justify-center">
+            <Button
+              onClick={() => setPaymentSuccessModal({ isOpen: false, order: null })}
+              className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+            >
+              Đóng
             </Button>
           </DialogFooter>
         </DialogContent>
