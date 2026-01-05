@@ -58,13 +58,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        return { 
-          success: false, 
-          error: `Login failed: ${response.status} ${errorText || response.statusText}` 
+        return {
+          success: false,
+          error: `Login failed: ${response.status} ${errorText || response.statusText}`
         };
       }
 
       const data = await response.json();
+
+      // Block CLIENT role from logging in
+      if (data.role === "CLIENT") {
+        return {
+          success: false,
+          error: "Bạn làm gì ở đây vậy"
+        };
+      }
 
       // Save user data
       const authUser: AuthUser = {
@@ -82,9 +90,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     } catch (error) {
       console.error("Login error:", error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : "Network error occurred" 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Network error occurred"
       };
     }
   };

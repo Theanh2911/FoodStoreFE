@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +23,7 @@ export default function LoginPage() {
   const [password, setPassword] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [showErrorDialog, setShowErrorDialog] = React.useState(false);
-  
+
   const { login, isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -41,7 +42,14 @@ export default function LoginPage() {
     if (result.success) {
       router.push("/");
     } else {
-      setShowErrorDialog(true);
+      // Check if this is a CLIENT role block
+      if (result.error === "Bạn làm gì ở đây vậy") {
+        toast.error("Bạn làm gì ở đây vậy", {
+          description: "Bạn không có quyền truy cập vào hệ thống này.",
+        });
+      } else {
+        setShowErrorDialog(true);
+      }
     }
 
     setIsLoading(false);
