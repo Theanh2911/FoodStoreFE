@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/auth-context";
 import { Toaster } from "@/components/ui/toaster";
+import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,8 +47,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased mobile-scroll safe-area-top safe-area-bottom`}
       >
         <AuthProvider>
-          {children}
-          <Toaster />
+          <ConfirmDialogProvider>
+            {children}
+            <Toaster />
+          </ConfirmDialogProvider>
         </AuthProvider>
       </body>
     </html>

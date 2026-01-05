@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 import { Product } from "@/lib/api";
+import { toast } from "sonner";
 
 export interface UpdateFormData {
   productId: number;
@@ -64,7 +65,7 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
     const file = event.target.files?.[0];
     if (file) {
       setFormData(prev => ({ ...prev, image: file }));
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -86,26 +87,26 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
     e.preventDefault();
 
     if (!formData.name || !formData.price) {
-      alert("Vui lòng điền đầy đủ thông tin bắt buộc");
+      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
       // Use imageUrl if provided, otherwise use uploaded file, otherwise keep original
       const finalImageUrl = formData.imageUrl || (formData.image ? "uploaded-file" : (product?.image || ""));
-      
+
       const submitData: UpdateFormData = {
         ...formData,
         imageUrl: finalImageUrl,
       };
-      
+
       await onSubmit(submitData);
       onClose();
     } catch (error) {
       console.error("Error submitting form:", error);
-      alert("Có lỗi xảy ra khi cập nhật món. Vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra khi cập nhật món. Vui lòng thử lại.");
     } finally {
       setIsSubmitting(false);
     }
@@ -196,7 +197,7 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
           {/* Image Upload */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Hoặc tải lên hình ảnh mới</Label>
-            
+
             {imagePreview ? (
               <div className="relative" style={{ height: '192px' }}>
                 <Image
@@ -231,7 +232,7 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
                 </Button>
               </div>
             )}
-            
+
             <input
               ref={fileInputRef}
               type="file"

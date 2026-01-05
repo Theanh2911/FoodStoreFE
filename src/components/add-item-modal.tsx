@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { toast } from "sonner";
 
 export interface AddItemFormData {
   name: string;
@@ -53,7 +54,7 @@ export function AddItemModal({ isOpen, onClose, title, onSubmit }: AddItemModalP
     const file = event.target.files?.[0];
     if (file) {
       setFormData(prev => ({ ...prev, image: file }));
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -75,19 +76,19 @@ export function AddItemModal({ isOpen, onClose, title, onSubmit }: AddItemModalP
     e.preventDefault();
 
     if (!formData.name || !formData.price) {
-      alert("Vui lòng điền đầy đủ thông tin bắt buộc");
+      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
       // Use imageUrl if provided, otherwise use uploaded file
       const submitData = {
         ...formData,
         image: formData.imageUrl || formData.image,
       };
-      
+
       await onSubmit(submitData);
       // Reset form
       setFormData({
@@ -100,7 +101,7 @@ export function AddItemModal({ isOpen, onClose, title, onSubmit }: AddItemModalP
       onClose();
     } catch (error) {
       console.error("Error submitting form:", error);
-      alert("Có lỗi xảy ra khi thêm món. Vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra khi thêm món. Vui lòng thử lại.");
     } finally {
       setIsSubmitting(false);
     }
@@ -182,7 +183,7 @@ export function AddItemModal({ isOpen, onClose, title, onSubmit }: AddItemModalP
           {/* Image Upload */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Hoặc tải lên hình ảnh</Label>
-            
+
             {imagePreview ? (
               <div className="relative" style={{ height: '192px' }}>
                 <Image
@@ -217,7 +218,7 @@ export function AddItemModal({ isOpen, onClose, title, onSubmit }: AddItemModalP
                 </Button>
               </div>
             )}
-            
+
             <input
               ref={fileInputRef}
               type="file"

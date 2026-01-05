@@ -12,6 +12,7 @@ import { ProductImage } from "@/components/product-image";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function DoAnPage() {
   return (
@@ -23,6 +24,7 @@ export default function DoAnPage() {
 
 function DoAnPageContent() {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [foodItems, setFoodItems] = React.useState<Product[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -141,9 +143,15 @@ function DoAnPageContent() {
   };
 
   const handleDeleteClick = async (productId: number) => {
-    const confirmDelete = window.confirm("Bạn có chắc chắn muốn xóa món này không?");
+    const confirmed = await confirm({
+      title: "Xác nhận xóa món ăn",
+      description: "Bạn có chắc chắn muốn xóa món này không? Hành động này không thể hoàn tác.",
+      confirmText: "Xóa",
+      cancelText: "Huỷ",
+      variant: "destructive"
+    });
 
-    if (!confirmDelete) {
+    if (!confirmed) {
       return;
     }
 
