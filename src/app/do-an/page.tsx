@@ -11,6 +11,7 @@ import { apiService, formatPrice, CATEGORY_IDS, Product } from "@/lib/api";
 import { ProductImage } from "@/components/product-image";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useAuth } from "@/contexts/auth-context";
+import { toast } from "sonner";
 
 export default function DoAnPage() {
   return (
@@ -28,7 +29,7 @@ function DoAnPageContent() {
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
-  
+
   const foodCategories = ["Món chính", "Ăn sáng", "Khai vị", "Món nướng", "Món chiên"];
   const isAdmin = user?.role === "ADMIN";
 
@@ -37,15 +38,15 @@ function DoAnPageContent() {
     const fetchFoodItems = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       const result = await apiService.getProductsByCategory(CATEGORY_IDS.FOOD);
-      
+
       if (result.error) {
         setError(result.error);
       } else {
         setFoodItems(result.data);
       }
-      
+
       setIsLoading(false);
     };
 
@@ -68,15 +69,15 @@ function DoAnPageContent() {
 
       // Call the backend API to add the product
       const addResult = await apiService.addProduct(productData);
-      
+
       if (addResult.error) {
         console.error("❌ Failed to add product:", addResult.error);
-        alert(`Lỗi khi thêm món: ${addResult.error}`);
+        toast.error(`Lỗi khi thêm món: ${addResult.error}`);
         return;
       }
 
       console.log("✅ Product added successfully:", addResult.data);
-      alert("Đã thêm món mới thành công!");
+      toast.success("Đã thêm món mới thành công!");
 
       // Refresh the product list from backend
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.FOOD);
@@ -87,7 +88,7 @@ function DoAnPageContent() {
 
     } catch (error) {
       console.error("💥 Error adding item:", error);
-      alert("Có lỗi xảy ra khi thêm món. Vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra khi thêm món. Vui lòng thử lại.");
     }
   };
 
@@ -113,15 +114,15 @@ function DoAnPageContent() {
 
       // Call the backend API to update the product
       const updateResult = await apiService.updateProduct(formData.productId, productData);
-      
+
       if (updateResult.error) {
         console.error("❌ Failed to update product:", updateResult.error);
-        alert(`Lỗi khi cập nhật món: ${updateResult.error}`);
+        toast.error(`Lỗi khi cập nhật món: ${updateResult.error}`);
         return;
       }
 
       console.log("✅ Product updated successfully:", updateResult.data);
-      alert("Đã cập nhật món thành công!");
+      toast.success("Đã cập nhật món thành công!");
 
       // Refresh the product list from backend
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.FOOD);
@@ -135,13 +136,13 @@ function DoAnPageContent() {
 
     } catch (error) {
       console.error("💥 Error updating item:", error);
-      alert("Có lỗi xảy ra khi cập nhật món. Vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra khi cập nhật món. Vui lòng thử lại.");
     }
   };
 
   const handleDeleteClick = async (productId: number) => {
     const confirmDelete = window.confirm("Bạn có chắc chắn muốn xóa món này không?");
-    
+
     if (!confirmDelete) {
       return;
     }
@@ -150,15 +151,15 @@ function DoAnPageContent() {
       console.log("🗑️ Deleting product:", productId);
 
       const deleteResult = await apiService.deleteProduct(productId);
-      
+
       if (deleteResult.error) {
         console.error("❌ Failed to delete product:", deleteResult.error);
-        alert(`Lỗi khi xóa món: ${deleteResult.error}`);
+        toast.error(`Lỗi khi xóa món: ${deleteResult.error}`);
         return;
       }
 
       console.log("✅ Product deleted successfully");
-      alert("Đã xóa món thành công!");
+      toast.success("Đã xóa món thành công!");
 
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.FOOD);
       if (!refreshResult.error) {
@@ -168,14 +169,14 @@ function DoAnPageContent() {
 
     } catch (error) {
       console.error("💥 Error deleting item:", error);
-      alert("Có lỗi xảy ra khi xóa món. Vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra khi xóa món. Vui lòng thử lại.");
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNav />
-      
+
       <main className="container mx-auto p-3 sm:p-4 lg:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -188,7 +189,7 @@ function DoAnPageContent() {
             </p>
           </div>
           {isAdmin && (
-            <Button 
+            <Button
               className="mt-4 sm:mt-0 w-full sm:w-auto"
               onClick={() => setIsAddModalOpen(true)}
             >
@@ -211,9 +212,9 @@ function DoAnPageContent() {
           <div className="flex items-center justify-center py-8">
             <AlertCircle className="h-8 w-8 text-red-600" />
             <span className="ml-2 text-red-600">Lỗi: {error}</span>
-            <Button 
-              variant="outline" 
-              className="ml-4" 
+            <Button
+              variant="outline"
+              className="ml-4"
               onClick={() => window.location.reload()}
             >
               Thử lại

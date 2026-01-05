@@ -11,6 +11,7 @@ import { apiService, formatPrice, CATEGORY_IDS, Product } from "@/lib/api";
 import { ProductImage } from "@/components/product-image";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useAuth } from "@/contexts/auth-context";
+import { toast } from "sonner";
 
 export default function DoUongPage() {
   return (
@@ -28,7 +29,7 @@ function DoUongPageContent() {
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
-  
+
   const drinkCategories = ["Cà phê", "Trà", "Nước ép", "Sinh tố", "Nước tự nhiên", "Bia", "Nước ngọt"];
   const isAdmin = user?.role === "ADMIN";
 
@@ -37,15 +38,15 @@ function DoUongPageContent() {
     const fetchDrinkItems = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       const result = await apiService.getProductsByCategory(CATEGORY_IDS.DRINKS);
-      
+
       if (result.error) {
         setError(result.error);
       } else {
         setDrinkItems(result.data);
       }
-      
+
       setIsLoading(false);
     };
 
@@ -68,15 +69,15 @@ function DoUongPageContent() {
 
       // Call the backend API to add the product
       const addResult = await apiService.addProduct(productData);
-      
+
       if (addResult.error) {
         console.error("❌ Failed to add product:", addResult.error);
-        alert(`Lỗi khi thêm đồ uống: ${addResult.error}`);
+        toast.error(`Lỗi khi thêm đồ uống: ${addResult.error}`);
         return;
       }
 
       console.log("✅ Product added successfully:", addResult.data);
-      alert("Đã thêm đồ uống mới thành công!");
+      toast.success("Đã thêm đồ uống mới thành công!");
 
       // Refresh the product list from backend
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.DRINKS);
@@ -87,7 +88,7 @@ function DoUongPageContent() {
 
     } catch (error) {
       console.error("💥 Error adding item:", error);
-      alert("Có lỗi xảy ra khi thêm đồ uống. Vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra khi thêm đồ uống. Vui lòng thử lại.");
     }
   };
 
@@ -111,15 +112,15 @@ function DoUongPageContent() {
       console.log("🔄 Sending update to API:", productData);
 
       const updateResult = await apiService.updateProduct(formData.productId, productData);
-      
+
       if (updateResult.error) {
         console.error("❌ Failed to update product:", updateResult.error);
-        alert(`Lỗi khi cập nhật đồ uống: ${updateResult.error}`);
+        toast.error(`Lỗi khi cập nhật đồ uống: ${updateResult.error}`);
         return;
       }
 
       console.log("✅ Product updated successfully:", updateResult.data);
-      alert("Đã cập nhật đồ uống thành công!");
+      toast.success("Đã cập nhật đồ uống thành công!");
 
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.DRINKS);
       if (!refreshResult.error) {
@@ -132,14 +133,14 @@ function DoUongPageContent() {
 
     } catch (error) {
       console.error("💥 Error updating item:", error);
-      alert("Có lỗi xảy ra khi cập nhật đồ uống. Vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra khi cập nhật đồ uống. Vui lòng thử lại.");
     }
   };
 
   const handleDeleteClick = async (productId: number) => {
     // Show confirmation dialog
     const confirmDelete = window.confirm("Bạn có chắc chắn muốn xóa đồ uống này không?");
-    
+
     if (!confirmDelete) {
       return;
     }
@@ -149,15 +150,15 @@ function DoUongPageContent() {
 
       // Call the backend API to delete the product
       const deleteResult = await apiService.deleteProduct(productId);
-      
+
       if (deleteResult.error) {
         console.error("❌ Failed to delete product:", deleteResult.error);
-        alert(`Lỗi khi xóa đồ uống: ${deleteResult.error}`);
+        toast.error(`Lỗi khi xóa đồ uống: ${deleteResult.error}`);
         return;
       }
 
       console.log("✅ Product deleted successfully");
-      alert("Đã xóa đồ uống thành công!");
+      toast.success("Đã xóa đồ uống thành công!");
 
       // Refresh the product list from backend
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.DRINKS);
@@ -168,14 +169,14 @@ function DoUongPageContent() {
 
     } catch (error) {
       console.error("💥 Error deleting item:", error);
-      alert("Có lỗi xảy ra khi xóa đồ uống. Vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra khi xóa đồ uống. Vui lòng thử lại.");
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNav />
-      
+
       <main className="container mx-auto p-3 sm:p-4 lg:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -188,7 +189,7 @@ function DoUongPageContent() {
             </p>
           </div>
           {isAdmin && (
-            <Button 
+            <Button
               className="mt-4 sm:mt-0 w-full sm:w-auto"
               onClick={() => setIsAddModalOpen(true)}
             >
@@ -211,9 +212,9 @@ function DoUongPageContent() {
           <div className="flex items-center justify-center py-8">
             <AlertCircle className="h-8 w-8 text-red-600" />
             <span className="ml-2 text-red-600">Lỗi: {error}</span>
-            <Button 
-              variant="outline" 
-              className="ml-4" 
+            <Button
+              variant="outline"
+              className="ml-4"
               onClick={() => window.location.reload()}
             >
               Thử lại
@@ -254,17 +255,17 @@ function DoUongPageContent() {
                       </div>
                       {isAdmin && (
                         <div className="flex space-x-2">
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => handleEditClick(item)}
                             title="Chỉnh sửa đồ uống"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             className="text-red-600 hover:text-red-700"
                             onClick={() => handleDeleteClick(item.productId)}
                             title="Xóa đồ uống"

@@ -65,13 +65,13 @@ async function refreshAuthToken(): Promise<boolean> {
     }
 
     const data = await response.json();
-    
+
     // Update tokens in localStorage
     if (data.token && data.refreshToken) {
       updateAuthTokens(data.token, data.refreshToken);
       return true;
     }
-    
+
     return false;
   } catch (error) {
     console.error('Token refresh error:', error);
@@ -147,7 +147,7 @@ class ApiService {
   }> = [];
 
   private async fetchWithErrorHandling<T>(
-    url: string, 
+    url: string,
     options?: RequestInit,
     isRetry: boolean = false
   ): Promise<ApiResponse<T>> {
@@ -157,12 +157,12 @@ class ApiService {
         'Content-Type': 'application/json',
         ...options?.headers as Record<string, string>,
       };
-      
+
       // Add Authorization header if token exists
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch(url, {
         headers,
         ...options,
@@ -171,9 +171,9 @@ class ApiService {
       // Handle 401 Unauthorized - Token expired
       if (response.status === 401 && !isRetry) {
         console.log('Token expired, attempting refresh...');
-        
+
         const refreshSuccess = await refreshAuthToken();
-        
+
         if (refreshSuccess) {
           console.log('Token refreshed successfully, retrying request...');
           // Retry the original request with new token
@@ -190,13 +190,28 @@ class ApiService {
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      // Handle empty responses (e.g., 204 No Content or empty body from DELETE operations)
+      const contentLength = response.headers.get('content-length');
+      const contentType = response.headers.get('content-type');
+
+      // If response has no content or is empty, return empty data
+      if (response.status === 204 || contentLength === '0' || !contentType?.includes('application/json')) {
+        return { data: null as unknown as T };
+      }
+
+      // Check if response body is empty before parsing
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        return { data: null as unknown as T };
+      }
+
+      const data = JSON.parse(text);
       return { data };
     } catch (error) {
       console.error('API Request failed:', error);
-      return { 
-        data: [] as unknown as T, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        data: [] as unknown as T,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -218,7 +233,7 @@ class ApiService {
     if (result.error) {
       return result;
     }
-    
+
     const filteredProducts = result.data.filter(product => product.category.categoryId === categoryId);
     return { data: filteredProducts };
   }
@@ -236,7 +251,7 @@ class ApiService {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch(url, {
         method,
         headers,
@@ -247,7 +262,7 @@ class ApiService {
       if (response.status === 401 && !isRetry) {
         console.log('Token expired, attempting refresh...');
         const refreshSuccess = await refreshAuthToken();
-        
+
         if (refreshSuccess) {
           console.log('Token refreshed successfully, retrying request...');
           return this.fetchWithFormData<T>(url, formData, method, true);
@@ -266,9 +281,9 @@ class ApiService {
       return { data };
     } catch (error) {
       console.error('API Request failed:', error);
-      return { 
-        data: {} as T, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        data: {} as T,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -280,23 +295,23 @@ class ApiService {
     image?: File | string;
   }): Promise<ApiResponse<Product>> {
     const formData = new FormData();
-    
+
     // Create product object as JSON
     const product = {
       name: productData.name,
       price: productData.price,
       categoryId: productData.categoryId,
     };
-    
+
     // Add product info as JSON blob with correct content type
     const productBlob = new Blob([JSON.stringify(product)], { type: 'application/json' });
     formData.append('product', productBlob);
-    
+
     // Add image if provided
     if (productData.image instanceof File) {
       formData.append('imageFile', productData.image);
     }
-    
+
     return this.fetchWithFormData<Product>(
       `${API_BASE_URL}/menu/products/create`,
       formData,
@@ -312,23 +327,23 @@ class ApiService {
     categoryId: number;
   }): Promise<ApiResponse<Product>> {
     const formData = new FormData();
-    
+
     // Create product object as JSON
     const product = {
       name: productData.name,
       price: productData.price,
       categoryId: productData.categoryId,
     };
-    
+
     // Add product info as JSON blob with correct content type
     const productBlob = new Blob([JSON.stringify(product)], { type: 'application/json' });
     formData.append('product', productBlob);
-    
+
     // Add image if provided (note: ảnh cũ sẽ tự động xóa từ đường xóa nếu có ảnh mới)
     if (productData.image instanceof File) {
       formData.append('imageFile', productData.image);
     }
-    
+
     return this.fetchWithFormData<Product>(
       `${API_BASE_URL}/menu/products/update/${productId}`,
       formData,
@@ -343,12 +358,12 @@ class ApiService {
   }
 
   async getAllOrders(): Promise<ApiResponse<Order[]>> {
-    
+
     return this.fetchWithErrorHandling<Order[]>(`${API_BASE_URL}/orders/getAll`);
   }
 
   async updateOrderStatus(orderId: number, status: string): Promise<ApiResponse<Order>> {
-    
+
     return this.fetchWithErrorHandling<Order>(`${API_BASE_URL}/orders/${orderId}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
@@ -359,7 +374,7 @@ class ApiService {
   async getAllEmployees(): Promise<ApiResponse<Employee[]>> {
     const token = getAuthToken();
     console.log('Token for getAllEmployees:', token ? 'exists' : 'missing');
-    
+
     return this.fetchWithErrorHandling<Employee[]>(`${API_BASE_URL}/auth/get-users-by-roles`, {
       method: 'POST',
       body: JSON.stringify(["ADMIN", "STAFF"]),
@@ -421,7 +436,7 @@ class ApiService {
     qrCodeImage?: File;
   }): Promise<ApiResponse<BankInfo>> {
     const formData = new FormData();
-    
+
     // Create bank object as JSON
     const bankInfo = {
       bankName: bankData.bankName,
@@ -429,16 +444,16 @@ class ApiService {
       accountHolder: bankData.accountHolder,
       status: bankData.status,
     };
-    
+
     // Add bank info as JSON blob with correct content type
     const bankBlob = new Blob([JSON.stringify(bankInfo)], { type: 'application/json' });
     formData.append('bank', bankBlob);
-    
+
     // Add image if provided
     if (bankData.qrCodeImage) {
       formData.append('qrCodeImage', bankData.qrCodeImage);
     }
-    
+
     return this.fetchWithFormData<BankInfo>(
       `${API_BASE_URL}/banks`,
       formData,
@@ -454,7 +469,7 @@ class ApiService {
     qrCodeImage?: File;
   }): Promise<ApiResponse<BankInfo>> {
     const formData = new FormData();
-    
+
     // Create bank object as JSON
     const bankInfo = {
       bankName: bankData.bankName,
@@ -462,16 +477,16 @@ class ApiService {
       accountHolder: bankData.accountHolder,
       status: bankData.status,
     };
-    
+
     // Add bank info as JSON blob with correct content type
     const bankBlob = new Blob([JSON.stringify(bankInfo)], { type: 'application/json' });
     formData.append('bank', bankBlob);
-    
+
     // Add image if provided
     if (bankData.qrCodeImage) {
       formData.append('qrCodeImage', bankData.qrCodeImage);
     }
-    
+
     return this.fetchWithFormData<BankInfo>(
       `${API_BASE_URL}/banks/${bankId}`,
       formData,
@@ -495,7 +510,7 @@ class ApiService {
         const token = getAuthToken();
 
         controller = new AbortController();
-        
+
         const headers: Record<string, string> = {
           'Accept': 'text/event-stream',
         };
@@ -516,7 +531,7 @@ class ApiService {
         if (response.status === 401 && !isRetry) {
           console.log('SSE auth failed, attempting token refresh...');
           const refreshSuccess = await refreshAuthToken();
-          
+
           if (refreshSuccess) {
             console.log('Token refreshed, reconnecting SSE...');
             return connect(true);
@@ -554,7 +569,7 @@ class ApiService {
         if (debugSse) console.log('SSE: Starting to read stream...');
         while (true) {
           const { done, value } = await reader.read();
-          
+
           if (done) {
             if (debugSse) console.log('Disconnected ');
             break;
@@ -570,7 +585,7 @@ class ApiService {
             const normalizedLine = line.endsWith('\r') ? line.slice(0, -1) : line;
             const trimmedLine = normalizedLine.trim();
             if (debugSse) console.log('SSE line:', JSON.stringify(normalizedLine), 'trimmed:', JSON.stringify(trimmedLine));
-            
+
             // Ignore SSE comments/keep-alives
             if (trimmedLine.startsWith(':')) {
               continue;
@@ -719,14 +734,14 @@ export const parseOrderTime = (dateTimeString: string): Date => {
     const dateWithTimezone = dateTimeString.includes('T') && !dateTimeString.includes('Z') && !dateTimeString.includes('+')
       ? `${dateTimeString}+07:00`
       : dateTimeString;
-    
+
     const date = new Date(dateWithTimezone);
 
     if (isNaN(date.getTime())) {
       console.warn('Invalid date string:', dateTimeString);
       return new Date();
     }
-    
+
     return date;
   } catch (error) {
     console.error('Error parsing date:', dateTimeString, error);

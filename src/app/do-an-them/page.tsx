@@ -11,6 +11,7 @@ import { apiService, formatPrice, CATEGORY_IDS, Product } from "@/lib/api";
 import { ProductImage } from "@/components/product-image";
 import { ProtectedRoute } from "@/components/protected-route";
 import { useAuth } from "@/contexts/auth-context";
+import { toast } from "sonner";
 
 export default function DoAnThemPage() {
   return (
@@ -28,7 +29,7 @@ function DoAnThemPageContent() {
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
-  
+
   const additionalCategories = ["Tráng miệng", "Ăn vặt", "Ăn kèm", "Gia vị", "Bánh kẹo", "Khác"];
   const isAdmin = user?.role === "ADMIN";
 
@@ -37,15 +38,15 @@ function DoAnThemPageContent() {
     const fetchAdditionalItems = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       const result = await apiService.getProductsByCategory(CATEGORY_IDS.ADDITIONAL);
-      
+
       if (result.error) {
         setError(result.error);
       } else {
         setAdditionalItems(result.data);
       }
-      
+
       setIsLoading(false);
     };
 
@@ -64,13 +65,13 @@ function DoAnThemPageContent() {
       };
 
       const addResult = await apiService.addProduct(productData);
-      
+
       if (addResult.error) {
         console.error("cannot add product", addResult.error);
-        alert(`Lỗi khi thêm món phụ: ${addResult.error}`);
+        toast.error(`Lỗi khi thêm món phụ: ${addResult.error}`);
         return;
       }
-      alert("Đã thêm món phụ mới thành công!");
+      toast.success("Đã thêm món phụ mới thành công!");
 
       // Refresh the product list from backend
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.ADDITIONAL);
@@ -80,7 +81,7 @@ function DoAnThemPageContent() {
       }
 
     } catch (error) {
-      alert("Có lỗi xảy ra khi thêm món phụ. Vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra khi thêm món phụ. Vui lòng thử lại.");
     }
   };
 
@@ -103,13 +104,13 @@ function DoAnThemPageContent() {
       console.log("🔄 Sending update to API:", productData);
 
       const updateResult = await apiService.updateProduct(formData.productId, productData);
-      
+
       if (updateResult.error) {
-        alert(`Lỗi khi cập nhật món phụ: ${updateResult.error}`);
+        toast.error(`Lỗi khi cập nhật món phụ: ${updateResult.error}`);
         return;
       }
 
-      alert("Đã cập nhật món phụ thành công!");
+      toast.success("Đã cập nhật món phụ thành công!");
 
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.ADDITIONAL);
       if (!refreshResult.error) {
@@ -121,14 +122,14 @@ function DoAnThemPageContent() {
       setEditingProduct(null);
 
     } catch (error) {
-      alert("Có lỗi xảy ra khi cập nhật món phụ. Vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra khi cập nhật món phụ. Vui lòng thử lại.");
     }
   };
 
   const handleDeleteClick = async (productId: number) => {
     // Show confirmation dialog
     const confirmDelete = window.confirm("Bạn có chắc chắn muốn xóa món phụ này không?");
-    
+
     if (!confirmDelete) {
       return;
     }
@@ -138,15 +139,15 @@ function DoAnThemPageContent() {
 
       // Call the backend API to delete the product
       const deleteResult = await apiService.deleteProduct(productId);
-      
+
       if (deleteResult.error) {
         console.error("❌ Failed to delete product:", deleteResult.error);
-        alert(`Lỗi khi xóa món phụ: ${deleteResult.error}`);
+        toast.error(`Lỗi khi xóa món phụ: ${deleteResult.error}`);
         return;
       }
 
       console.log("✅ Product deleted successfully");
-      alert("Đã xóa món phụ thành công!");
+      toast.success("Đã xóa món phụ thành công!");
 
       // Refresh the product list from backend
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.ADDITIONAL);
@@ -157,14 +158,14 @@ function DoAnThemPageContent() {
 
     } catch (error) {
       console.error("💥 Error deleting item:", error);
-      alert("Có lỗi xảy ra khi xóa món phụ. Vui lòng thử lại.");
+      toast.error("Có lỗi xảy ra khi xóa món phụ. Vui lòng thử lại.");
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNav />
-      
+
       <main className="container mx-auto p-3 sm:p-4 lg:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -177,7 +178,7 @@ function DoAnThemPageContent() {
             </p>
           </div>
           {isAdmin && (
-            <Button 
+            <Button
               className="mt-4 sm:mt-0 w-full sm:w-auto"
               onClick={() => setIsAddModalOpen(true)}
             >
@@ -200,9 +201,9 @@ function DoAnThemPageContent() {
           <div className="flex items-center justify-center py-8">
             <AlertCircle className="h-8 w-8 text-red-600" />
             <span className="ml-2 text-red-600">Lỗi: {error}</span>
-            <Button 
-              variant="outline" 
-              className="ml-4" 
+            <Button
+              variant="outline"
+              className="ml-4"
               onClick={() => window.location.reload()}
             >
               Thử lại
@@ -243,17 +244,17 @@ function DoAnThemPageContent() {
                       </div>
                       {isAdmin && (
                         <div className="flex space-x-2">
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => handleEditClick(item)}
                             title="Chỉnh sửa món phụ"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             className="text-red-600 hover:text-red-700"
                             onClick={() => handleDeleteClick(item.productId)}
                             title="Xóa món phụ"
