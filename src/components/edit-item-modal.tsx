@@ -52,7 +52,7 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
       setFormData({
         productId: product.productId,
         name: product.name,
-        price: product.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","), // Format with commas
+        price: product.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","),
         imageUrl: product.image || "",
         categoryId: product.category.categoryId,
         image: null,

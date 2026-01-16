@@ -680,6 +680,17 @@ class ApiService {
             }
             break;
 
+          case 'order-status-changed':
+            if (eventData && typeof eventData === 'object' && eventData.orderId) {
+              const existingIndex = currentOrders.findIndex(order => order.orderId === eventData.orderId);
+              if (existingIndex >= 0) {
+                // Update the entire order with new data from event
+                currentOrders[existingIndex] = eventData;
+                onDataCallback([...currentOrders]);
+              }
+            }
+            break;
+
           case 'connected':
             if (Array.isArray(eventData)) {
               onDataCallback(eventData);
