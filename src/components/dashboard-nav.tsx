@@ -36,8 +36,7 @@ export function DashboardNav() {
   };
 
   const handleReviewClick = () => {
-    console.log("Navigating to reviews page");
-    // Add navigation logic here when reviews page is created
+    router.push("/danh-gia");
   };
 
   return (

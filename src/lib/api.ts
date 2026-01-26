@@ -139,6 +139,26 @@ export interface BankInfo {
   status: string;
 }
 
+export interface Rating {
+  ratingId: number;
+  orderId: number;
+  userId: string;
+  comment: string;
+  rating: number;
+  imageUrls: string[];
+  createdAt: string;
+  orderDetails: {
+    orderId: number;
+    customerName: string;
+    tableNumber: number;
+    totalAmount: number;
+    orderTime: string;
+    status: string;
+    isRated: boolean;
+    items: OrderItem[];
+  };
+}
+
 class ApiService {
   private isRefreshing = false;
   private failedQueue: Array<{
@@ -491,6 +511,13 @@ class ApiService {
       `${API_BASE_URL}/banks/${bankId}`,
       formData,
       'PUT'
+    );
+  }
+
+  // Rating APIs
+  async getAllRatings(): Promise<ApiResponse<{ message: string; total: number; data: Rating[] }>> {
+    return this.fetchWithErrorHandling<{ message: string; total: number; data: Rating[] }>(
+      `${API_BASE_URL}/ratings`
     );
   }
 
