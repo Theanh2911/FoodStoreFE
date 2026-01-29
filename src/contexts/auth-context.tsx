@@ -39,7 +39,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(authData);
       }
     } catch (error) {
-      console.error("Failed to load auth data:", error);
       localStorage.removeItem(AUTH_STORAGE_KEY);
     } finally {
       setIsLoading(false);
@@ -89,7 +88,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return { success: true };
     } catch (error) {
-      console.error("Login error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Network error occurred"
@@ -111,7 +109,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
     } catch (error) {
-      console.error("Logout API error:", error);
       // Continue with logout even if API call fails
     } finally {
       // Clear local state and storage
@@ -158,7 +155,7 @@ export function getAuthToken(): string | null {
       return authData.token;
     }
   } catch (error) {
-    console.error("Failed to get auth token:", error);
+    // Silent error handling
   }
   return null;
 }

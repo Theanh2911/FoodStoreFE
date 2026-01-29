@@ -105,7 +105,6 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
       await onSubmit(submitData);
       onClose();
     } catch (error) {
-      console.error("Error submitting form:", error);
       toast.error("Có lỗi xảy ra khi cập nhật món. Vui lòng thử lại.");
     } finally {
       setIsSubmitting(false);

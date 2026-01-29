@@ -57,8 +57,6 @@ function DoUongPageContent() {
 
   const handleAddItem = async (formData: AddItemFormData) => {
     try {
-      console.log("📝 Form data received:", formData);
-
       // Prepare data for API call
       const productData = {
         name: formData.name,
@@ -67,29 +65,23 @@ function DoUongPageContent() {
         image: formData.image || formData.imageUrl || "", // Use uploaded file or image URL
       };
 
-      console.log("🔄 Sending to API:", productData);
-
       // Call the backend API to add the product
       const addResult = await apiService.addProduct(productData);
 
       if (addResult.error) {
-        console.error("❌ Failed to add product:", addResult.error);
         toast.error(`Lỗi khi thêm đồ uống: ${addResult.error}`);
         return;
       }
 
-      console.log("✅ Product added successfully:", addResult.data);
       toast.success("Đã thêm đồ uống mới thành công!");
 
       // Refresh the product list from backend
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.DRINKS);
       if (!refreshResult.error) {
         setDrinkItems(refreshResult.data);
-        console.log("🔄 Product list refreshed");
       }
 
     } catch (error) {
-      console.error("💥 Error adding item:", error);
       toast.error("Có lỗi xảy ra khi thêm đồ uống. Vui lòng thử lại.");
     }
   };
@@ -101,8 +93,6 @@ function DoUongPageContent() {
 
   const handleEditItem = async (formData: UpdateFormData) => {
     try {
-      console.log("📝 Edit form data received:", formData);
-
       const productData = {
         productId: formData.productId,
         name: formData.name || editingProduct?.name || "",
@@ -111,30 +101,24 @@ function DoUongPageContent() {
         categoryId: formData.categoryId || editingProduct?.category.categoryId || CATEGORY_IDS.DRINKS,
       };
 
-      console.log("🔄 Sending update to API:", productData);
-
       const updateResult = await apiService.updateProduct(formData.productId, productData);
 
       if (updateResult.error) {
-        console.error("❌ Failed to update product:", updateResult.error);
         toast.error(`Lỗi khi cập nhật đồ uống: ${updateResult.error}`);
         return;
       }
 
-      console.log("✅ Product updated successfully:", updateResult.data);
       toast.success("Đã cập nhật đồ uống thành công!");
 
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.DRINKS);
       if (!refreshResult.error) {
         setDrinkItems(refreshResult.data);
-        console.log("🔄 Product list refreshed");
       }
 
       setIsEditModalOpen(false);
       setEditingProduct(null);
 
     } catch (error) {
-      console.error("💥 Error updating item:", error);
       toast.error("Có lỗi xảy ra khi cập nhật đồ uống. Vui lòng thử lại.");
     }
   };
@@ -153,29 +137,23 @@ function DoUongPageContent() {
     }
 
     try {
-      console.log("🗑️ Deleting product:", productId);
-
       // Call the backend API to delete the product
       const deleteResult = await apiService.deleteProduct(productId);
 
       if (deleteResult.error) {
-        console.error("❌ Failed to delete product:", deleteResult.error);
         toast.error(`Lỗi khi xóa đồ uống: ${deleteResult.error}`);
         return;
       }
 
-      console.log("✅ Product deleted successfully");
       toast.success("Đã xóa đồ uống thành công!");
 
       // Refresh the product list from backend
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.DRINKS);
       if (!refreshResult.error) {
         setDrinkItems(refreshResult.data);
-        console.log("🔄 Product list refreshed");
       }
 
     } catch (error) {
-      console.error("💥 Error deleting item:", error);
       toast.error("Có lỗi xảy ra khi xóa đồ uống. Vui lòng thử lại.");
     }
   };

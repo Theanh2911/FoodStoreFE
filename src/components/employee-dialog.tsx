@@ -49,7 +49,6 @@ export function EmployeeDialog({ open, onOpenChange }: EmployeeDialogProps) {
     if (result.error) {
       setError(result.error);
     } else {
-      console.log('Employees data:', result.data); // Debug: xem structure của data
       setEmployees(result.data);
     }
     setIsLoading(false);

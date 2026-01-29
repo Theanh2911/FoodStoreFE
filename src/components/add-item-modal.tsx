@@ -100,7 +100,6 @@ export function AddItemModal({ isOpen, onClose, title, onSubmit }: AddItemModalP
       setImagePreview(null);
       onClose();
     } catch (error) {
-      console.error("Error submitting form:", error);
       toast.error("Có lỗi xảy ra khi thêm món. Vui lòng thử lại.");
     } finally {
       setIsSubmitting(false);

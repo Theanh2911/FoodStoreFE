@@ -57,8 +57,6 @@ function DoAnThemPageContent() {
 
   const handleAddItem = async (formData: AddItemFormData) => {
     try {
-      console.log("data received", formData);
-
       const productData = {
         name: formData.name,
         price: parseFloat(formData.price.replace(/,/g, '')),
@@ -69,7 +67,6 @@ function DoAnThemPageContent() {
       const addResult = await apiService.addProduct(productData);
 
       if (addResult.error) {
-        console.error("cannot add product", addResult.error);
         toast.error(`Lỗi khi thêm món phụ: ${addResult.error}`);
         return;
       }
@@ -79,7 +76,6 @@ function DoAnThemPageContent() {
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.ADDITIONAL);
       if (!refreshResult.error) {
         setAdditionalItems(refreshResult.data);
-        console.log("🔄 Product list refreshed");
       }
 
     } catch (error) {
@@ -103,8 +99,6 @@ function DoAnThemPageContent() {
         categoryId: formData.categoryId || editingProduct?.category.categoryId || CATEGORY_IDS.ADDITIONAL,
       };
 
-      console.log("🔄 Sending update to API:", productData);
-
       const updateResult = await apiService.updateProduct(formData.productId, productData);
 
       if (updateResult.error) {
@@ -117,7 +111,6 @@ function DoAnThemPageContent() {
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.ADDITIONAL);
       if (!refreshResult.error) {
         setAdditionalItems(refreshResult.data);
-        console.log("🔄 Product list refreshed");
       }
 
       setIsEditModalOpen(false);
@@ -142,29 +135,23 @@ function DoAnThemPageContent() {
     }
 
     try {
-      console.log("🗑️ Deleting product:", productId);
-
       // Call the backend API to delete the product
       const deleteResult = await apiService.deleteProduct(productId);
 
       if (deleteResult.error) {
-        console.error("❌ Failed to delete product:", deleteResult.error);
         toast.error(`Lỗi khi xóa món phụ: ${deleteResult.error}`);
         return;
       }
 
-      console.log("✅ Product deleted successfully");
       toast.success("Đã xóa món phụ thành công!");
 
       // Refresh the product list from backend
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.ADDITIONAL);
       if (!refreshResult.error) {
         setAdditionalItems(refreshResult.data);
-        console.log("🔄 Product list refreshed");
       }
 
     } catch (error) {
-      console.error("💥 Error deleting item:", error);
       toast.error("Có lỗi xảy ra khi xóa món phụ. Vui lòng thử lại.");
     }
   };

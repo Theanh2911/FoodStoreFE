@@ -9,7 +9,7 @@ function getAuthToken(): string | null {
       return authData.token;
     }
   } catch (error) {
-    console.error('Failed to get auth token:', error);
+    // Silent error handling
   }
   return null;
 }
@@ -23,7 +23,7 @@ function getRefreshToken(): string | null {
       return authData.refreshToken;
     }
   } catch (error) {
-    console.error('Failed to get refresh token:', error);
+    // Silent error handling
   }
   return null;
 }
@@ -39,7 +39,7 @@ function updateAuthTokens(newToken: string, newRefreshToken: string): void {
       localStorage.setItem('foodstore_auth', JSON.stringify(authData));
     }
   } catch (error) {
-    console.error('Failed to update auth tokens:', error);
+    // Silent error handling
   }
 }
 
@@ -47,7 +47,6 @@ async function refreshAuthToken(): Promise<boolean> {
   try {
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
-      console.error('No refresh token available');
       return false;
     }
 
@@ -60,7 +59,6 @@ async function refreshAuthToken(): Promise<boolean> {
     });
 
     if (!response.ok) {
-      console.error('Token refresh failed:', response.status);
       return false;
     }
 
@@ -74,7 +72,6 @@ async function refreshAuthToken(): Promise<boolean> {
 
     return false;
   } catch (error) {
-    console.error('Token refresh error:', error);
     return false;
   }
 }
@@ -190,17 +187,13 @@ class ApiService {
 
       // Handle 401 Unauthorized - Token expired
       if (response.status === 401 && !isRetry) {
-        console.log('Token expired, attempting refresh...');
-
         const refreshSuccess = await refreshAuthToken();
 
         if (refreshSuccess) {
-          console.log('Token refreshed successfully, retrying request...');
           // Retry the original request with new token
           return this.fetchWithErrorHandling<T>(url, options, true);
         } else {
           // Refresh failed - logout user
-          console.error('Token refresh failed, logging out...');
           this.handleAuthFailure();
           throw new Error('Session expired. Please login again.');
         }
@@ -228,7 +221,6 @@ class ApiService {
       const data = JSON.parse(text);
       return { data };
     } catch (error) {
-      console.error('API Request failed:', error);
       return {
         data: [] as unknown as T,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -280,14 +272,11 @@ class ApiService {
 
       // Handle 401 Unauthorized - Token expired
       if (response.status === 401 && !isRetry) {
-        console.log('Token expired, attempting refresh...');
         const refreshSuccess = await refreshAuthToken();
 
         if (refreshSuccess) {
-          console.log('Token refreshed successfully, retrying request...');
           return this.fetchWithFormData<T>(url, formData, method, true);
         } else {
-          console.error('Token refresh failed, logging out...');
           this.handleAuthFailure();
           throw new Error('Session expired. Please login again.');
         }
@@ -300,7 +289,6 @@ class ApiService {
       const data = await response.json();
       return { data };
     } catch (error) {
-      console.error('API Request failed:', error);
       return {
         data: {} as T,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -392,9 +380,6 @@ class ApiService {
 
   // Employee Management APIs
   async getAllEmployees(): Promise<ApiResponse<Employee[]>> {
-    const token = getAuthToken();
-    console.log('Token for getAllEmployees:', token ? 'exists' : 'missing');
-
     return this.fetchWithErrorHandling<Employee[]>(`${API_BASE_URL}/auth/get-users-by-roles`, {
       method: 'POST',
       body: JSON.stringify(["ADMIN", "STAFF"]),
@@ -787,13 +772,11 @@ export const parseOrderTime = (dateTimeString: string): Date => {
     const date = new Date(dateWithTimezone);
 
     if (isNaN(date.getTime())) {
-      console.warn('Invalid date string:', dateTimeString);
       return new Date();
     }
 
     return date;
   } catch (error) {
-    console.error('Error parsing date:', dateTimeString, error);
     return new Date();
   }
 };
@@ -809,7 +792,6 @@ export const formatDateTime = (dateTimeString: string): string => {
       minute: '2-digit',
     });
   } catch (error) {
-    console.error('Error formatting date:', dateTimeString, error);
     return 'Invalid Date';
   }
 };
