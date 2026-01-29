@@ -77,41 +77,42 @@ export function EmployeeDialog({ open, onOpenChange }: EmployeeDialogProps) {
     }
   };
 
-  const handleDeleteEmployee = async (_id: number) => {
-    toast.info("Chức năng xóa nhân viên chưa có API từ backend");
-    // TODO: Implement when API is available
-    // if (confirm("Bạn có chắc chắn muốn xóa nhân viên này?")) {
-    //   setIsLoading(true);
-    //   const result = await apiService.deleteEmployee(userId);
-    //   
-    //   if (result.error) {
-    //     setError(result.error);
-    //   } else {
-    //     await fetchEmployees();
-    //   }
-    //   setIsLoading(false);
-    // }
+  const handleDeleteEmployee = async (id: number) => {
+    if (confirm("Bạn có chắc chắn muốn xóa nhân viên này?")) {
+      setIsLoading(true);
+      setError(null);
+      const result = await apiService.deleteEmployee(id);
+      
+      if (result.error) {
+        setError(result.error);
+        toast.error("Xóa nhân viên thất bại!");
+      } else {
+        toast.success("Xóa nhân viên thành công!");
+        await fetchEmployees();
+      }
+      setIsLoading(false);
+    }
   };
 
-  const handleEditEmployee = (_employee: Employee) => {
-    toast.info("Chức năng chỉnh sửa nhân viên chưa có API từ backend");
-    // TODO: Implement when API is available
-    // setEditingId(employee.id);
-    // setEditingEmployee({ ...employee });
+  const handleEditEmployee = (employee: Employee) => {
+    setEditingId(employee.id);
+    setEditingEmployee({ ...employee });
   };
 
   const handleSaveEdit = async () => {
     if (editingEmployee) {
       setIsLoading(true);
+      setError(null);
       const result = await apiService.updateEmployee(editingEmployee.id, {
         name: editingEmployee.name,
         phoneNumber: editingEmployee.phoneNumber,
-        role: editingEmployee.role,
       });
 
       if (result.error) {
         setError(result.error);
+        toast.error("Cập nhật nhân viên thất bại!");
       } else {
+        toast.success("Cập nhật nhân viên thành công!");
         await fetchEmployees();
         setEditingId(null);
         setEditingEmployee(null);
@@ -256,17 +257,6 @@ export function EmployeeDialog({ open, onOpenChange }: EmployeeDialogProps) {
                                 value={editingEmployee.phoneNumber}
                                 onChange={(e) => setEditingEmployee({ ...editingEmployee, phoneNumber: e.target.value })}
                               />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Vai trò</Label>
-                              <select
-                                value={editingEmployee.role}
-                                onChange={(e) => setEditingEmployee({ ...editingEmployee, role: e.target.value })}
-                                className="w-full border border-gray-300 rounded-md p-2"
-                              >
-                                <option value="STAFF">STAFF</option>
-                                <option value="ADMIN">ADMIN</option>
-                              </select>
                             </div>
                             <div className="flex gap-2">
                               <Button onClick={handleSaveEdit} size="sm" className="flex-1" disabled={isLoading}>

@@ -412,18 +412,29 @@ class ApiService {
     });
   }
 
-  async updateEmployee(userId: number, employeeData: Partial<Employee>): Promise<ApiResponse<Employee>> {
-    // TODO: Add actual API endpoint when available
-    return this.fetchWithErrorHandling<Employee>(`${API_BASE_URL}/users/update/${userId}`, {
+  async updateEmployee(userId: number, employeeData: { name: string; phoneNumber: string }): Promise<ApiResponse<Employee>> {
+    return this.fetchWithErrorHandling<Employee>(`${API_BASE_URL}/auth/users/${userId}`, {
       method: 'PUT',
-      body: JSON.stringify(employeeData),
+      body: JSON.stringify({
+        name: employeeData.name,
+        phoneNumber: employeeData.phoneNumber,
+      }),
     });
   }
 
   async deleteEmployee(userId: number): Promise<ApiResponse<void>> {
-    // TODO: Add actual API endpoint when available
-    return this.fetchWithErrorHandling<void>(`${API_BASE_URL}/users/delete/${userId}`, {
+    return this.fetchWithErrorHandling<void>(`${API_BASE_URL}/auth/users/${userId}`, {
       method: 'DELETE',
+    });
+  }
+
+  async updatePassword(oldPassword: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
+    return this.fetchWithErrorHandling<{ message: string }>(`${API_BASE_URL}/auth/update-password`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        oldPassword,
+        newPassword,
+      }),
     });
   }
 
