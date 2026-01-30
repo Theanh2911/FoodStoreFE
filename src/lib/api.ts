@@ -334,6 +334,8 @@ class ApiService {
     productId: number;
     name: string;
     price: number;
+    cost?: number;
+    defaultDailyLimit?: number | null;
     image?: File | string;
     categoryId: number;
   }): Promise<ApiResponse<Product>> {
@@ -343,6 +345,8 @@ class ApiService {
     const product = {
       name: productData.name,
       price: productData.price,
+      cost: productData.cost,
+      defaultDailyLimit: productData.defaultDailyLimit,
       categoryId: productData.categoryId,
     };
 
