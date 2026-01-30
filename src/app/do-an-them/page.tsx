@@ -95,6 +95,8 @@ function DoAnThemPageContent() {
         productId: formData.productId,
         name: formData.name || editingProduct?.name || "",
         price: formData.price ? parseFloat(formData.price.replace(/,/g, '')) : editingProduct?.price || 0,
+        cost: formData.cost ? parseFloat(formData.cost.replace(/,/g, '')) : editingProduct?.cost || 0,
+        defaultDailyLimit: formData.defaultDailyLimit ? parseInt(formData.defaultDailyLimit) : (editingProduct?.defaultDailyLimit ?? null),
         image: formData.image || formData.imageUrl || editingProduct?.image || "",
         categoryId: formData.categoryId || editingProduct?.category.categoryId || CATEGORY_IDS.ADDITIONAL,
       };
@@ -233,8 +235,15 @@ function DoAnThemPageContent() {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="flex items-center justify-between">
-                      <div className="text-xl font-bold text-green-600">
-                        {formatPrice(item.price)}
+                      <div>
+                        <div className="text-xl font-bold text-green-600">
+                          {formatPrice(item.price)}
+                        </div>
+                        {item.cost !== undefined && item.cost > 0 && (
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            Chi phí: {formatPrice(item.cost)}
+                          </div>
+                        )}
                       </div>
                       {isAdmin && (
                         <div className="flex space-x-2">

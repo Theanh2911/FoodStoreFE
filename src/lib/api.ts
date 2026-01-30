@@ -80,11 +80,14 @@ export interface Product {
   productId: number;
   name: string;
   price: number;
+  cost?: number;
+  defaultDailyLimit?: number | null;
   image: string | null;
   category: {
     categoryId: number;
     name: string;
   };
+  isActive?: boolean;
 }
 
 export interface OrderItem {

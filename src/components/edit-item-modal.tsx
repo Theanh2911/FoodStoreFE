@@ -21,6 +21,8 @@ export interface UpdateFormData {
   productId: number;
   name: string;
   price: string;
+  cost: string;
+  defaultDailyLimit: string;
   imageUrl: string;
   categoryId: number;
   image: File | string | null;
@@ -38,6 +40,8 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
     productId: 0,
     name: "",
     price: "",
+    cost: "",
+    defaultDailyLimit: "",
     imageUrl: "",
     categoryId: 0,
     image: null,
@@ -53,6 +57,8 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
         productId: product.productId,
         name: product.name,
         price: product.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","),
+        cost: product.cost?.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") || "0",
+        defaultDailyLimit: product.defaultDailyLimit?.toString() || "",
         imageUrl: product.image || "",
         categoryId: product.category.categoryId,
         image: null,
@@ -123,6 +129,11 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
     setFormData(prev => ({ ...prev, price: formatted }));
   };
 
+  const handleCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPrice(e.target.value);
+    setFormData(prev => ({ ...prev, cost: formatted }));
+  };
+
   if (!product) return null;
 
   return (
@@ -135,7 +146,7 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Product ID Display */}
           <div className="bg-gray-50 p-3 rounded-lg">
             <div className="text-sm text-gray-600">
@@ -144,7 +155,7 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
           </div>
 
           {/* Item Name */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="name" className="text-sm font-medium">
               Tên món <span className="text-red-500">*</span>
             </Label>
@@ -158,7 +169,7 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
           </div>
 
           {/* Price */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="price" className="text-sm font-medium">
               Giá tiền <span className="text-red-500">*</span>
             </Label>
@@ -176,8 +187,45 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
             </div>
           </div>
 
+          {/* Cost */}
+          <div className="space-y-1.5">
+            <Label htmlFor="cost" className="text-sm font-medium">
+              Chi phí
+            </Label>
+            <div className="relative">
+              <Input
+                id="cost"
+                value={formData.cost}
+                onChange={handleCostChange}
+                placeholder="VD: 30,000"
+                className="pr-12"
+              />
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                VNĐ
+              </div>
+            </div>
+          </div>
+
+          {/* Default Daily Limit */}
+          <div className="space-y-1.5">
+            <Label htmlFor="defaultDailyLimit" className="text-sm font-medium">
+              Giới hạn số lượng/ngày
+            </Label>
+            <Input
+              id="defaultDailyLimit"
+              type="number"
+              value={formData.defaultDailyLimit}
+              onChange={(e) => setFormData(prev => ({ ...prev, defaultDailyLimit: e.target.value }))}
+              placeholder="Để trống = không giới hạn"
+              className="w-full"
+            />
+            <p className="text-xs text-gray-500">
+              Để trống nếu không giới hạn số lượng
+            </p>
+          </div>
+
           {/* Image URL Input */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="imageUrl" className="text-sm font-medium">
               URL Hình ảnh
             </Label>
@@ -194,7 +242,7 @@ export function EditItemModal({ isOpen, onClose, product, onSubmit }: EditItemMo
           </div>
 
           {/* Image Upload */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label className="text-sm font-medium">Hoặc tải lên hình ảnh mới</Label>
 
             {imagePreview ? (
