@@ -13,7 +13,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { useInventoryStream } from "@/hooks/use-inventory-stream";
+import { useInventory } from "@/contexts/inventory-context";
 
 export default function DoUongPage() {
   return (
@@ -32,7 +32,7 @@ function DoUongPageContent() {
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
-  const { inventory } = useInventoryStream();
+  const { inventory } = useInventory();
 
   const drinkCategories = ["Cà phê", "Trà", "Nước ép", "Sinh tố", "Nước tự nhiên", "Bia", "Nước ngọt"];
   const isAdmin = user?.role === "ADMIN";
