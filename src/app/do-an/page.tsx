@@ -222,9 +222,13 @@ function DoAnPageContent() {
             ) : (
               foodItems.map((item) => {
                 const remainingQuantity = inventory[item.productId];
+                const isOutOfStock = remainingQuantity !== undefined && remainingQuantity !== null && remainingQuantity === 0;
                 const displayText = remainingQuantity !== undefined && remainingQuantity !== null 
-                  ? `Còn lại: ${remainingQuantity}` 
+                  ? (isOutOfStock ? "Hết hàng" : `Còn lại: ${remainingQuantity}`) 
                   : "Còn nguyên";
+                const badgeClass = isOutOfStock 
+                  ? "text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded whitespace-nowrap"
+                  : "text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded whitespace-nowrap";
                 
                 return (
                   <Card key={item.productId} className="hover:shadow-lg transition-shadow">
@@ -242,7 +246,7 @@ function DoAnPageContent() {
                             <p className="text-sm text-gray-500">{item.category.name}</p>
                           </div>
                         </div>
-                        <div className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded whitespace-nowrap">
+                        <div className={badgeClass}>
                           {displayText}
                         </div>
                       </div>

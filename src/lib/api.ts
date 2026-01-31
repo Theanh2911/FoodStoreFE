@@ -159,6 +159,15 @@ export interface Rating {
   };
 }
 
+export interface TodayInventoryItem {
+  productId: number;
+  productName: string;
+  numberRemain: number;
+  dailyLimit: number;
+  priceAtDate: number;
+  costAtDate: number;
+}
+
 class ApiService {
   private isRefreshing = false;
   private failedQueue: Array<{
@@ -522,6 +531,11 @@ class ApiService {
     return this.fetchWithErrorHandling<{ message: string; total: number; data: Rating[] }>(
       `${API_BASE_URL}/ratings`
     );
+  }
+
+  // Inventory APIs
+  async getTodayInventory(): Promise<ApiResponse<TodayInventoryItem[]>> {
+    return this.fetchWithErrorHandling<TodayInventoryItem[]>(`${API_BASE_URL}/inventory/today`);
   }
 
   connectToOrdersStream(

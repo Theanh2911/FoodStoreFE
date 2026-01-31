@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
+import { apiService } from '@/lib/api';
 
 export interface InventoryEvent {
   productId: number;
@@ -35,6 +36,30 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [, forceUpdate] = useState({});
 
   const connectRef = useRef<(() => Promise<void>) | undefined>(undefined);
+
+  // Load initial inventory data on mount
+  useEffect(() => {
+    const loadInitialInventory = async () => {
+      console.log('[Inventory] Loading initial inventory data...');
+      const result = await apiService.getTodayInventory();
+      
+      if (result.error) {
+        console.error('[Inventory] Failed to load initial data:', result.error);
+        return;
+      }
+
+      // Convert array to inventory state object
+      const initialInventory: InventoryState = {};
+      result.data.forEach(item => {
+        initialInventory[item.productId] = item.numberRemain;
+      });
+
+      console.log('[Inventory] Initial inventory loaded:', Object.keys(initialInventory).length, 'products');
+      setInventory(initialInventory);
+    };
+
+    loadInitialInventory();
+  }, []);
 
   connectRef.current = async () => {
     // STRICT LOCK: Prevent ANY simultaneous connection attempts
