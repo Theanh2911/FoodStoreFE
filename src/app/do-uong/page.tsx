@@ -13,6 +13,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useInventoryStream } from "@/hooks/use-inventory-stream";
 
 export default function DoUongPage() {
   return (
@@ -31,6 +32,7 @@ function DoUongPageContent() {
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
+  const { inventory } = useInventoryStream();
 
   const drinkCategories = ["Cà phê", "Trà", "Nước ép", "Sinh tố", "Nước tự nhiên", "Bia", "Nước ngọt"];
   const isAdmin = user?.role === "ADMIN";
@@ -217,24 +219,33 @@ function DoUongPageContent() {
                 Chưa có đồ uống nào. Hãy thêm đồ uống mới!
               </div>
             ) : (
-              drinkItems.map((item) => (
-                <Card key={item.productId} className="hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <ProductImage
-                          imageUrl={item.image}
-                          productName={item.name}
-                          categoryName={item.category.name}
-                          className="w-12 h-12"
-                        />
-                        <div>
-                          <CardTitle className="text-lg">{item.name}</CardTitle>
-                          <p className="text-sm text-gray-500">{item.category.name}</p>
+              drinkItems.map((item) => {
+                const remainingQuantity = inventory[item.productId];
+                const displayText = remainingQuantity !== undefined && remainingQuantity !== null 
+                  ? `Còn lại: ${remainingQuantity}` 
+                  : "Còn nguyên";
+                
+                return (
+                  <Card key={item.productId} className="hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center space-x-3 flex-1">
+                          <ProductImage
+                            imageUrl={item.image}
+                            productName={item.name}
+                            categoryName={item.category.name}
+                            className="w-12 h-12"
+                          />
+                          <div className="flex-1">
+                            <CardTitle className="text-lg">{item.name}</CardTitle>
+                            <p className="text-sm text-gray-500">{item.category.name}</p>
+                          </div>
+                        </div>
+                        <div className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded whitespace-nowrap">
+                          {displayText}
                         </div>
                       </div>
-                    </div>
-                  </CardHeader>
+                    </CardHeader>
                   <CardContent className="pt-0">
                     <div className="flex items-center justify-between">
                       <div>
@@ -271,7 +282,8 @@ function DoUongPageContent() {
                     </div>
                   </CardContent>
                 </Card>
-              ))
+                );
+              })
             )}
           </div>
         )}
