@@ -24,6 +24,9 @@ let globalSubscriberCount = 0;
 let globalController: AbortController | null = null;
 let globalShouldReconnect = false;
 let globalReconnectTimeout: NodeJS.Timeout | null = null;
+let isConnecting = false;
+let connectionPromise: Promise<void> | null = null;
+let connectDebounceTimeout: NodeJS.Timeout | null = null;
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [inventory, setInventory] = useState<InventoryState>({});
@@ -34,14 +37,22 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const connectRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
   connectRef.current = async () => {
-    try {
-      // Clean up any existing connection FIRST
-      if (globalController) {
-        console.log('[Inventory SSE] Aborting existing connection');
-        globalController.abort();
-        globalController = null;
-      }
+    // STRICT LOCK: Prevent ANY simultaneous connection attempts
+    if (isConnecting) {
+      console.log('[Inventory SSE] 🔒 BLOCKED - Already connecting');
+      return;
+    }
 
+    if (globalController) {
+      console.log('[Inventory SSE] 🔒 BLOCKED - Already connected');
+      return;
+    }
+
+    try {
+      isConnecting = true;
+      console.log('[Inventory SSE] 🔓 LOCK ACQUIRED');
+
+      // Clean up any pending timeouts
       if (globalReconnectTimeout) {
         clearTimeout(globalReconnectTimeout);
         globalReconnectTimeout = null;
@@ -49,7 +60,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
       globalController = new AbortController();
 
-      console.log('[Inventory SSE] Connecting... Subscribers:', globalSubscriberCount);
+      console.log('[Inventory SSE] 🔌 CONNECTING... Subscribers:', globalSubscriberCount);
+      console.log('[Inventory SSE] Timestamp:', new Date().toISOString());
       
       const response = await fetch('https://api.yenhafood.site/api/inventory/stream', {
         method: 'GET',
@@ -64,6 +76,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('[Inventory SSE] ✅ CONNECTED - Subscribers:', globalSubscriberCount);
+      console.log('[Inventory SSE] Connection URL:', response.url);
+      isConnecting = false;
       setIsConnected(true);
       setError(null);
 
@@ -126,6 +140,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error: unknown) {
+      isConnecting = false;
+      
       if (error instanceof Error && error.name === 'AbortError') {
         console.log('[Inventory SSE] ❌ Aborted');
         return;
@@ -152,11 +168,25 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     globalSubscriberCount++;
     console.log('[Inventory SSE] 📥 Subscriber ADDED. Total:', globalSubscriberCount);
 
-    // Start connection if this is the first subscriber
-    if (globalSubscriberCount === 1 && connectRef.current) {
-      globalShouldReconnect = true;
-      connectRef.current();
+    // Clear any pending debounce
+    if (connectDebounceTimeout) {
+      clearTimeout(connectDebounceTimeout);
     }
+
+    // Debounce connection attempts - wait for all subscribers to register
+    connectDebounceTimeout = setTimeout(() => {
+      if (globalSubscriberCount > 0 && connectRef.current && !isConnecting && !globalController) {
+        console.log('[Inventory SSE] ⏰ Debounce complete, starting connection');
+        globalShouldReconnect = true;
+        
+        connectionPromise = connectRef.current();
+        connectionPromise.finally(() => {
+          connectionPromise = null;
+        });
+      } else {
+        console.log('[Inventory SSE] ⏸️ Skipping connection - already exists or connecting');
+      }
+    }, 100); // 100ms debounce
 
     // Force re-render to update connection status
     forceUpdate({});
@@ -166,19 +196,29 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     globalSubscriberCount--;
     console.log('[Inventory SSE] 📤 Subscriber REMOVED. Total:', globalSubscriberCount);
 
+    // Clear debounce timeout
+    if (connectDebounceTimeout) {
+      clearTimeout(connectDebounceTimeout);
+      connectDebounceTimeout = null;
+    }
+
     // Disconnect if no more subscribers
     if (globalSubscriberCount === 0) {
       console.log('[Inventory SSE] 🔌 DISCONNECTING - No subscribers');
       globalShouldReconnect = false;
+      isConnecting = false;
+      connectionPromise = null;
       
       if (globalReconnectTimeout) {
         clearTimeout(globalReconnectTimeout);
         globalReconnectTimeout = null;
       }
       
-      if (globalController) {
-        globalController.abort();
+      if (globalController !== null) {
+        console.log('[Inventory SSE] 🛑 Aborting controller...');
+        const controller = globalController;
         globalController = null;
+        controller.abort();
       }
       
       setIsConnected(false);
