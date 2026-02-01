@@ -182,6 +182,41 @@ export interface BusinessSuggestion {
   note: string;
 }
 
+export interface Category {
+  categoryId: number;
+  name: string;
+}
+
+export interface CreatePromotionRequest {
+  promotionType: 'PRODUCT' | 'ORDER';
+  discountPercentage: number;
+  startDate: string;
+  endDate: string;
+  productId?: number | null;
+  categoryId?: number | null;
+  quantity: number;
+  minOrderAmount: number;
+}
+
+export interface PromotionResponse {
+  promotionId: number;
+  code: string;
+  promotionType: 'PRODUCT' | 'ORDER';
+  discountPercentage: number;
+  startDate: string;
+  endDate: string;
+  productId: number | null;
+  productName: string | null;
+  categoryId: number | null;
+  categoryName: string | null;
+  totalQuantity: number;
+  usedCount: number;
+  remainingCount: number;
+  minOrderAmount: number;
+  status: string;
+  createdAt: string;
+}
+
 class ApiService {
   private isRefreshing = false;
   private failedQueue: Array<{
@@ -561,6 +596,18 @@ class ApiService {
         endDate,
       }),
     });
+  }
+
+  // Promotion APIs
+  async createPromotion(promotionData: CreatePromotionRequest): Promise<ApiResponse<PromotionResponse>> {
+    return this.fetchWithErrorHandling<PromotionResponse>(`${API_BASE_URL}/promotions/generate`, {
+      method: 'POST',
+      body: JSON.stringify(promotionData),
+    });
+  }
+
+  async getAllCategories(): Promise<ApiResponse<Category[]>> {
+    return this.fetchWithErrorHandling<Category[]>(`${API_BASE_URL}/menu/categories`);
   }
 
   connectToOrdersStream(

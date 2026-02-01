@@ -5,12 +5,13 @@ import { DashboardNav } from "@/components/dashboard-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Filter, TrendingUp, Award, Loader2, AlertCircle, Sparkles } from "lucide-react";
+import { Calendar, Filter, TrendingUp, Award, Loader2, AlertCircle, Sparkles, Plus } from "lucide-react";
 import { apiService, formatPrice, Order, formatDateTime, parseOrderTime, BusinessSuggestion, Product } from "@/lib/api";
 import { ProtectedRoute } from "@/components/protected-route";
 import { RoleProtectedRoute } from "@/components/role-protected-route";
 import { ProductImage } from "@/components/product-image";
 import { Badge } from "@/components/ui/badge";
+import { CreatePromotionModal } from "@/components/create-promotion-modal";
 
 interface OrderSummary {
   orderId: number;
@@ -62,6 +63,9 @@ function DoanhThuPageContent() {
   // Filter states
   const [selectedProductionStrategies, setSelectedProductionStrategies] = React.useState<string[]>([]);
   const [selectedProfitStrategies, setSelectedProfitStrategies] = React.useState<string[]>([]);
+  
+  // Promotion modal state
+  const [isPromotionModalOpen, setIsPromotionModalOpen] = React.useState(false);
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -300,7 +304,7 @@ function DoanhThuPageContent() {
       
       <main className="container mx-auto p-3 sm:p-4 lg:p-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
               Doanh thu
@@ -309,6 +313,13 @@ function DoanhThuPageContent() {
               Theo dõi và phân tích doanh thu từ đơn hàng đã thanh toán
             </p>
           </div>
+          <Button 
+            onClick={() => setIsPromotionModalOpen(true)}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 whitespace-nowrap"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Tạo khuyến mãi
+          </Button>
         </div>
 
         {/* Date Filter */}
@@ -666,6 +677,12 @@ function DoanhThuPageContent() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Create Promotion Modal */}
+      <CreatePromotionModal
+        isOpen={isPromotionModalOpen}
+        onClose={() => setIsPromotionModalOpen(false)}
+      />
     </div>
   );
 }
