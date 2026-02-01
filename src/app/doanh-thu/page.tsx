@@ -509,10 +509,10 @@ function DoanhThuPageContent() {
                         className="flex items-start gap-4 p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
                       >
                         <ProductImage
-                          src={product.image}
-                          alt={product.name}
+                          imageUrl={product.image}
+                          productName={product.name}
                           categoryName={product.category.name}
-                          className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                          className="w-20 h-20"
                         />
                         <div className="flex-1">
                           <h3 className="font-semibold text-lg text-gray-900">
