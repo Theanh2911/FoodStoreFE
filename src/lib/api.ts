@@ -168,6 +168,20 @@ export interface TodayInventoryItem {
   costAtDate: number;
 }
 
+export interface BusinessSuggestion {
+  productId: number;
+  performanceTag: 'best_seller' | 'average' | 'slow_seller';
+  productionStrategy: 'increase' | 'keep' | 'decrease';
+  profitMarginStrategy: 'increase' | 'keep' | 'decrease';
+  promotionStrategy: {
+    mainProduct: string | null;
+    comboMainProduct: string | null;
+    sideDish: string | null;
+    drink: string | null;
+  } | null;
+  note: string;
+}
+
 class ApiService {
   private isRefreshing = false;
   private failedQueue: Array<{
@@ -536,6 +550,17 @@ class ApiService {
   // Inventory APIs
   async getTodayInventory(): Promise<ApiResponse<TodayInventoryItem[]>> {
     return this.fetchWithErrorHandling<TodayInventoryItem[]>(`${API_BASE_URL}/inventory/today`);
+  }
+
+  // Business Suggestion API
+  async getBusinessSuggestion(startDate: string, endDate: string): Promise<ApiResponse<BusinessSuggestion[]>> {
+    return this.fetchWithErrorHandling<BusinessSuggestion[]>(`${API_BASE_URL}/ai/business-suggestion`, {
+      method: 'POST',
+      body: JSON.stringify({
+        startDate,
+        endDate,
+      }),
+    });
   }
 
   connectToOrdersStream(
