@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Gift, Package, ShoppingCart, Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { apiService, Product, Category, CreatePromotionRequest } from "@/lib/api";
+import { apiService, Product, CreatePromotionRequest } from "@/lib/api";
 
 interface CreatePromotionModalProps {
   isOpen: boolean;
@@ -45,13 +45,12 @@ export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalPr
   const [step, setStep] = React.useState<'select' | 'form'>('select');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [products, setProducts] = React.useState<Product[]>([]);
-  const [categories, setCategories] = React.useState<Category[]>([]);
   const [isLoadingData, setIsLoadingData] = React.useState(false);
 
   const [formData, setFormData] = React.useState<FormData>({
     promotionType: null,
     productId: '',
-    categoryId: '',
+    categoryId: '', // Kept for interface compatibility but not used in UI
     discountPercentage: '',
     startDate: '',
     endDate: '',
@@ -67,17 +66,10 @@ export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalPr
 
   const fetchData = async () => {
     setIsLoadingData(true);
-    const [productsResult, categoriesResult] = await Promise.all([
-      apiService.getAllProducts(),
-      apiService.getAllCategories(),
-    ]);
+    const productsResult = await apiService.getAllProducts();
 
     if (!productsResult.error) {
       setProducts(productsResult.data);
-    }
-
-    if (!categoriesResult.error) {
-      setCategories(categoriesResult.data);
     }
 
     setIsLoadingData(false);
@@ -230,13 +222,11 @@ export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalPr
 
       if (formData.promotionType === 'PRODUCT') {
         requestData.productId = formData.productId ? parseInt(formData.productId) : null;
-        requestData.categoryId = formData.categoryId ? parseInt(formData.categoryId) : null;
+        requestData.categoryId = null;
       } else {
         requestData.productId = null;
         requestData.categoryId = null;
       }
-
-      console.log('📤 Sending promotion request:', JSON.stringify(requestData, null, 2));
 
       const result = await apiService.createPromotion(requestData);
 
@@ -354,27 +344,6 @@ export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalPr
                     {products.map((product) => (
                       <SelectItem key={product.productId} value={product.productId.toString()}>
                         {product.name} - {new Intl.NumberFormat('vi-VN').format(product.price)} VNĐ
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="category" className="text-sm font-medium">
-                  Danh mục (Không bắt buộc)
-                </Label>
-                <Select
-                  value={formData.categoryId}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Chọn danh mục" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.categoryId} value={category.categoryId.toString()}>
-                        {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
