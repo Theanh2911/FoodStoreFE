@@ -606,6 +606,16 @@ class ApiService {
     });
   }
 
+  async getAllPromotions(): Promise<ApiResponse<PromotionResponse[]>> {
+    return this.fetchWithErrorHandling<PromotionResponse[]>(`${API_BASE_URL}/promotions`);
+  }
+
+  async deactivatePromotion(code: string): Promise<ApiResponse<PromotionResponse>> {
+    return this.fetchWithErrorHandling<PromotionResponse>(`${API_BASE_URL}/promotions/${code}/deactivate`, {
+      method: 'PUT',
+    });
+  }
+
   async getAllCategories(): Promise<ApiResponse<Category[]>> {
     return this.fetchWithErrorHandling<Category[]>(`${API_BASE_URL}/menu/categories`);
   }

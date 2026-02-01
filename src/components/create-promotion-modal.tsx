@@ -19,9 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Gift, Package, ShoppingCart, Loader2, ArrowLeft } from "lucide-react";
+import { Gift, Package, ShoppingCart, Loader2, ArrowLeft, List, Ban } from "lucide-react";
 import { toast } from "sonner";
-import { apiService, Product, CreatePromotionRequest } from "@/lib/api";
+import { apiService, Product, CreatePromotionRequest, PromotionResponse } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
 
 interface CreatePromotionModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ interface CreatePromotionModalProps {
 }
 
 type PromotionType = 'PRODUCT' | 'ORDER' | null;
+type Step = 'select' | 'form' | 'manage';
 
 interface FormData {
   promotionType: PromotionType;
@@ -42,10 +44,12 @@ interface FormData {
 }
 
 export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalProps) {
-  const [step, setStep] = React.useState<'select' | 'form'>('select');
+  const [step, setStep] = React.useState<Step>('select');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [products, setProducts] = React.useState<Product[]>([]);
+  const [promotions, setPromotions] = React.useState<PromotionResponse[]>([]);
   const [isLoadingData, setIsLoadingData] = React.useState(false);
+  const [isLoadingPromotions, setIsLoadingPromotions] = React.useState(false);
 
   const [formData, setFormData] = React.useState<FormData>({
     promotionType: null,
@@ -75,9 +79,39 @@ export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalPr
     setIsLoadingData(false);
   };
 
+  const fetchPromotions = async () => {
+    setIsLoadingPromotions(true);
+    const result = await apiService.getAllPromotions();
+
+    if (!result.error) {
+      setPromotions(result.data);
+    } else {
+      toast.error('Không thể tải danh sách mã khuyến mãi');
+    }
+
+    setIsLoadingPromotions(false);
+  };
+
+  const handleDeactivate = async (code: string) => {
+    const result = await apiService.deactivatePromotion(code);
+
+    if (!result.error) {
+      toast.success('Vô hiệu hóa mã thành công');
+      // Refresh promotions list
+      fetchPromotions();
+    } else {
+      toast.error('Không thể vô hiệu hóa mã khuyến mãi');
+    }
+  };
+
   const handlePromotionTypeSelect = (type: PromotionType) => {
     setFormData(prev => ({ ...prev, promotionType: type }));
     setStep('form');
+  };
+
+  const handleManagePromotions = () => {
+    setStep('manage');
+    fetchPromotions();
   };
 
   const handleBack = () => {
@@ -296,6 +330,17 @@ export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalPr
           </div>
         </button>
       </div>
+
+      {/* Manage Promotions Button */}
+      <div className="border-t pt-4">
+        <button
+          onClick={handleManagePromotions}
+          className="w-full flex items-center justify-center gap-2 p-3 border-2 border-gray-200 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+        >
+          <List className="h-5 w-5 text-gray-600" />
+          <span className="font-medium text-gray-700">Quản lý mã</span>
+        </button>
+      </div>
     </>
   );
 
@@ -503,10 +548,98 @@ export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalPr
     </>
   );
 
+  const renderManageStep = () => (
+    <>
+      <DialogHeader>
+        <DialogTitle className="text-xl font-bold flex items-center gap-2">
+          <List className="h-5 w-5 text-gray-600" />
+          Quản lý mã khuyến mãi
+        </DialogTitle>
+        <DialogDescription>
+          Danh sách các mã khuyến mãi đã tạo
+        </DialogDescription>
+      </DialogHeader>
+
+      {isLoadingPromotions ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
+        </div>
+      ) : (
+        <div className="max-h-[60vh] overflow-y-auto pr-2">
+          {promotions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Chưa có mã khuyến mãi nào
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {promotions.map((promo) => (
+                <div
+                  key={promo.promotionId}
+                  className="p-4 border rounded-lg hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-lg text-purple-600">
+                          {promo.code}
+                        </span>
+                        <Badge variant={promo.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                          {promo.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã vô hiệu'}
+                        </Badge>
+                      </div>
+                      
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">{promo.productName || 'Khuyến mãi đơn hàng'}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-gray-600">
+                          Còn lại: <span className="font-semibold text-gray-900">{promo.remainingCount}/{promo.totalQuantity}</span>
+                        </span>
+                        <span className="text-gray-600">
+                          Giảm: <span className="font-semibold text-green-600">{promo.discountPercentage}%</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {promo.status === 'ACTIVE' && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeactivate(promo.code)}
+                      >
+                        <Ban className="h-4 w-4 mr-1" />
+                        Vô hiệu
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <DialogFooter className="pt-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleBack}
+          className="w-full sm:w-auto"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Quay lại
+        </Button>
+      </DialogFooter>
+    </>
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden">
-        {step === 'select' ? renderSelectStep() : renderFormStep()}
+        {step === 'select' && renderSelectStep()}
+        {step === 'form' && renderFormStep()}
+        {step === 'manage' && renderManageStep()}
       </DialogContent>
     </Dialog>
   );
