@@ -140,12 +140,34 @@ export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalPr
       return 'Vui lòng chọn ngày bắt đầu';
     }
 
+    if (formData.startDate.length !== 10) {
+      return 'Ngày bắt đầu phải đúng định dạng dd/mm/yyyy';
+    }
+
     if (!formData.endDate) {
       return 'Vui lòng chọn ngày kết thúc';
     }
 
-    const startDate = new Date(formData.startDate);
-    const endDate = new Date(formData.endDate);
+    if (formData.endDate.length !== 10) {
+      return 'Ngày kết thúc phải đúng định dạng dd/mm/yyyy';
+    }
+
+    // Parse dd/mm/yyyy to Date object
+    const parseDate = (dateStr: string): Date => {
+      const [day, month, year] = dateStr.split('/').map(Number);
+      return new Date(year, month - 1, day);
+    };
+
+    const startDate = parseDate(formData.startDate);
+    const endDate = parseDate(formData.endDate);
+
+    if (isNaN(startDate.getTime())) {
+      return 'Ngày bắt đầu không hợp lệ';
+    }
+
+    if (isNaN(endDate.getTime())) {
+      return 'Ngày kết thúc không hợp lệ';
+    }
 
     if (endDate <= startDate) {
       return 'Ngày kết thúc phải sau ngày bắt đầu';
@@ -188,11 +210,20 @@ export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalPr
     setIsSubmitting(true);
 
     try {
+      // Parse dd/mm/yyyy and format to backend format: yyyy-MM-ddTHH:mm:ss
+      const formatDateForBackend = (dateString: string, isEndDate: boolean = false): string => {
+        const [day, month, year] = dateString.split('/');
+        const hours = isEndDate ? '23' : '00';
+        const minutes = isEndDate ? '59' : '00';
+        const seconds = isEndDate ? '59' : '00';
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes}:${seconds}`;
+      };
+
       const requestData: CreatePromotionRequest = {
         promotionType: formData.promotionType!,
         discountPercentage: parseFloat(formData.discountPercentage),
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: new Date(formData.endDate).toISOString(),
+        startDate: formatDateForBackend(formData.startDate, false),
+        endDate: formatDateForBackend(formData.endDate, true),
         quantity: parseInt(formData.quantity),
         minOrderAmount: parseFormattedPrice(formData.minOrderAmount),
       };
@@ -204,6 +235,8 @@ export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalPr
         requestData.productId = null;
         requestData.categoryId = null;
       }
+
+      console.log('📤 Sending promotion request:', JSON.stringify(requestData, null, 2));
 
       const result = await apiService.createPromotion(requestData);
 
@@ -381,9 +414,26 @@ export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalPr
               </Label>
               <Input
                 id="startDate"
-                type="datetime-local"
+                type="text"
                 value={formData.startDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d/]/g, '');
+                  let formatted = value;
+                  if (value.length >= 2 && !value.includes('/')) {
+                    formatted = value.substring(0, 2) + '/' + value.substring(2);
+                  }
+                  if (value.length >= 5 && value.indexOf('/', 3) === -1) {
+                    const parts = value.split('/');
+                    if (parts.length === 2) {
+                      formatted = parts[0] + '/' + parts[1].substring(0, 2) + '/' + parts[1].substring(2);
+                    }
+                  }
+                  if (formatted.length <= 10) {
+                    setFormData(prev => ({ ...prev, startDate: formatted }));
+                  }
+                }}
+                placeholder="dd/mm/yyyy"
+                maxLength={10}
               />
             </div>
 
@@ -393,9 +443,26 @@ export function CreatePromotionModal({ isOpen, onClose }: CreatePromotionModalPr
               </Label>
               <Input
                 id="endDate"
-                type="datetime-local"
+                type="text"
                 value={formData.endDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d/]/g, '');
+                  let formatted = value;
+                  if (value.length >= 2 && !value.includes('/')) {
+                    formatted = value.substring(0, 2) + '/' + value.substring(2);
+                  }
+                  if (value.length >= 5 && value.indexOf('/', 3) === -1) {
+                    const parts = value.split('/');
+                    if (parts.length === 2) {
+                      formatted = parts[0] + '/' + parts[1].substring(0, 2) + '/' + parts[1].substring(2);
+                    }
+                  }
+                  if (formatted.length <= 10) {
+                    setFormData(prev => ({ ...prev, endDate: formatted }));
+                  }
+                }}
+                placeholder="dd/mm/yyyy"
+                maxLength={10}
               />
             </div>
           </div>
