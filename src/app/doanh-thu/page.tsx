@@ -315,7 +315,7 @@ function DoanhThuPageContent() {
           </div>
           <Button 
             onClick={() => setIsPromotionModalOpen(true)}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 whitespace-nowrap"
+            className="whitespace-nowrap"
           >
             <Plus className="h-4 w-4 mr-2" />
             Tạo khuyến mãi
@@ -549,85 +549,6 @@ function DoanhThuPageContent() {
             </CardContent>
           </Card>
         )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Orders List */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Danh sách đơn hàng đã thanh toán ({filteredOrders.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="max-h-96 overflow-y-auto space-y-3">
-                {filteredOrders.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    Không có đơn hàng đã thanh toán nào trong khoảng thời gian này
-                  </div>
-                ) : (
-                  filteredOrders.map((order) => (
-                    <div
-                      key={order.orderId}
-                      className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                    >
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          Đơn hàng #{order.orderId}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {formatDateTime(order.orderTime)}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-green-600">
-                          {formatPrice(order.totalAmount)}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Monthly Revenue Statistics */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2" />
-                Thống kê doanh thu theo tháng
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="max-h-96 overflow-y-auto space-y-3">
-                {monthlyRevenue.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    Chưa có dữ liệu doanh thu theo tháng
-                  </div>
-                ) : (
-                  monthlyRevenue.map((month, index) => (
-                    <div
-                      key={index}
-                      className="flex justify-between items-center p-3 bg-blue-50 rounded-lg"
-                    >
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {month.month}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {month.orderCount} đơn hàng
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-blue-600">
-                          {formatPrice(month.revenue)}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Top 5 Best Selling Products */}
         <Card>
