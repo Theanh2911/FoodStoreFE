@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/auth-context";
+import { InventoryProvider } from "@/contexts/inventory-context";
 import { Toaster } from "@/components/ui/toaster";
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 
@@ -47,10 +48,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased mobile-scroll safe-area-top safe-area-bottom`}
       >
         <AuthProvider>
-          <ConfirmDialogProvider>
-            {children}
-            <Toaster />
-          </ConfirmDialogProvider>
+          <InventoryProvider>
+            <ConfirmDialogProvider>
+              {children}
+              <Toaster />
+            </ConfirmDialogProvider>
+          </InventoryProvider>
         </AuthProvider>
       </body>
     </html>

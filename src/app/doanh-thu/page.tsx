@@ -5,10 +5,13 @@ import { DashboardNav } from "@/components/dashboard-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Filter, TrendingUp, Award, Loader2, AlertCircle } from "lucide-react";
-import { apiService, formatPrice, Order, formatDateTime, parseOrderTime } from "@/lib/api";
+import { Calendar, Filter, TrendingUp, Award, Loader2, AlertCircle, Sparkles, Plus } from "lucide-react";
+import { apiService, formatPrice, Order, formatDateTime, parseOrderTime, BusinessSuggestion, Product } from "@/lib/api";
 import { ProtectedRoute } from "@/components/protected-route";
 import { RoleProtectedRoute } from "@/components/role-protected-route";
+import { ProductImage } from "@/components/product-image";
+import { Badge } from "@/components/ui/badge";
+import { CreatePromotionModal } from "@/components/create-promotion-modal";
 
 interface OrderSummary {
   orderId: number;
@@ -49,19 +52,40 @@ function DoanhThuPageContent() {
   const [error, setError] = React.useState<string | null>(null);
   const [startDate, setStartDate] = React.useState('');
   const [endDate, setEndDate] = React.useState('');
+  
+  // Business Analysis states
+  const [suggestions, setSuggestions] = React.useState<BusinessSuggestion[]>([]);
+  const [products, setProducts] = React.useState<Product[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+  const [analysisError, setAnalysisError] = React.useState<string | null>(null);
+  const [activeTab, setActiveTab] = React.useState<'best_seller' | 'average' | 'slow_seller'>('best_seller');
+  
+  // Filter states
+  const [selectedProductionStrategies, setSelectedProductionStrategies] = React.useState<string[]>([]);
+  const [selectedProfitStrategies, setSelectedProfitStrategies] = React.useState<string[]>([]);
+  
+  // Promotion modal state
+  const [isPromotionModalOpen, setIsPromotionModalOpen] = React.useState(false);
 
   React.useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
       
-      const result = await apiService.getAllOrders();
+      const [ordersResult, productsResult] = await Promise.all([
+        apiService.getAllOrders(),
+        apiService.getAllProducts(),
+      ]);
       
-      if (result.error) {
-        setError(result.error);
+      if (ordersResult.error) {
+        setError(ordersResult.error);
       } else {
-        setOrders(result.data);
-        processOrderData(result.data);
+        setOrders(ordersResult.data);
+        processOrderData(ordersResult.data);
+      }
+      
+      if (!productsResult.error) {
+        setProducts(productsResult.data);
       }
       
       setIsLoading(false);
@@ -169,6 +193,87 @@ function DoanhThuPageContent() {
     processOrderData(filteredOrdersData);
   };
 
+  const analyzeBusinessData = async () => {
+    if (!startDate || !endDate) {
+      setAnalysisError('Vui lòng chọn khoảng thời gian');
+      return;
+    }
+
+    // Parse dd/mm/yyyy to yyyy-mm-dd format for API
+    const parseDate = (dateStr: string): string => {
+      const [day, month, year] = dateStr.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    };
+
+    try {
+      setIsAnalyzing(true);
+      setAnalysisError(null);
+
+      const formattedStartDate = parseDate(startDate);
+      const formattedEndDate = parseDate(endDate);
+
+      const result = await apiService.getBusinessSuggestion(formattedStartDate, formattedEndDate);
+
+      if (result.error) {
+        setAnalysisError('Tôi đau đầu quá, sếp thử lại sau');
+      } else {
+        setSuggestions(result.data);
+        setActiveTab('best_seller');
+      }
+    } catch (error) {
+      setAnalysisError('Tôi đau đầu quá, sếp thử lại sau');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const toggleProductionStrategy = (strategy: string) => {
+    setSelectedProductionStrategies(prev =>
+      prev.includes(strategy)
+        ? prev.filter(s => s !== strategy)
+        : [...prev, strategy]
+    );
+  };
+
+  const toggleProfitStrategy = (strategy: string) => {
+    setSelectedProfitStrategies(prev =>
+      prev.includes(strategy)
+        ? prev.filter(s => s !== strategy)
+        : [...prev, strategy]
+    );
+  };
+
+  const getFilteredSuggestions = () => {
+    let filtered = suggestions.filter(s => s.performanceTag === activeTab);
+
+    if (selectedProductionStrategies.length > 0) {
+      filtered = filtered.filter(s => selectedProductionStrategies.includes(s.productionStrategy));
+    }
+
+    if (selectedProfitStrategies.length > 0) {
+      filtered = filtered.filter(s => selectedProfitStrategies.includes(s.profitMarginStrategy));
+    }
+
+    return filtered;
+  };
+
+  const getProductById = (productId: number): Product | undefined => {
+    return products.find(p => p.productId === productId);
+  };
+
+  const getTabLabel = (tag: 'best_seller' | 'average' | 'slow_seller'): string => {
+    const labels = {
+      best_seller: 'Bán chạy',
+      average: 'Trung bình',
+      slow_seller: 'Bán chậm',
+    };
+    return labels[tag];
+  };
+
+  const getTabCount = (tag: 'best_seller' | 'average' | 'slow_seller'): number => {
+    return suggestions.filter(s => s.performanceTag === tag).length;
+  };
+
   const resetFilter = () => {
     setStartDate('');
     setEndDate('');
@@ -199,7 +304,7 @@ function DoanhThuPageContent() {
       
       <main className="container mx-auto p-3 sm:p-4 lg:p-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
               Doanh thu
@@ -208,6 +313,13 @@ function DoanhThuPageContent() {
               Theo dõi và phân tích doanh thu từ đơn hàng đã thanh toán
             </p>
           </div>
+          <Button 
+            onClick={() => setIsPromotionModalOpen(true)}
+            className="whitespace-nowrap"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Tạo khuyến mãi
+          </Button>
         </div>
 
         {/* Date Filter */}
@@ -282,11 +394,21 @@ function DoanhThuPageContent() {
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button 
-                  onClick={applyDateFilter} 
-                  disabled={!startDate || !endDate}
-                  className="w-full sm:w-auto"
+                  onClick={analyzeBusinessData} 
+                  disabled={!startDate || !endDate || isAnalyzing}
+                  className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                 >
-                  Áp dụng
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sếp đợi chút nhé, tôi đang thống kê
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Phân tích
+                    </>
+                  )}
                 </Button>
                 <Button 
                   variant="outline" 
@@ -303,87 +425,130 @@ function DoanhThuPageContent() {
                 {error}
               </div>
             )}
+            {analysisError && (
+              <div className="mt-4 flex items-center text-red-600">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                {analysisError}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Orders List */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Danh sách đơn hàng đã thanh toán ({filteredOrders.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="max-h-96 overflow-y-auto space-y-3">
-                {filteredOrders.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    Không có đơn hàng đã thanh toán nào trong khoảng thời gian này
-                  </div>
-                ) : (
-                  filteredOrders.map((order) => (
-                    <div
-                      key={order.orderId}
-                      className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                    >
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          Đơn hàng #{order.orderId}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {formatDateTime(order.orderTime)}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-green-600">
-                          {formatPrice(order.totalAmount)}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Monthly Revenue Statistics */}
-          <Card>
+        {/* Business Analysis Results */}
+        {suggestions.length > 0 && (
+          <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2" />
-                Thống kê doanh thu theo tháng
+                <Sparkles className="h-5 w-5 mr-2 text-purple-600" />
+                Phân tích kinh doanh
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="max-h-96 overflow-y-auto space-y-3">
-                {monthlyRevenue.length === 0 ? (
+              {/* Tabs */}
+              <div className="flex border-b mb-4 overflow-x-auto">
+                {(['best_seller', 'average', 'slow_seller'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 py-2 font-medium whitespace-nowrap transition-colors ${
+                      activeTab === tab
+                        ? 'border-b-2 border-purple-600 text-purple-600'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    {getTabLabel(tab)} ({getTabCount(tab)})
+                  </button>
+                ))}
+              </div>
+
+              {/* Filters */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Số lượng sản phẩm
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {['increase', 'keep', 'decrease'].map((strategy) => (
+                      <Badge
+                        key={strategy}
+                        variant={selectedProductionStrategies.includes(strategy) ? 'default' : 'outline'}
+                        className="cursor-pointer"
+                        onClick={() => toggleProductionStrategy(strategy)}
+                      >
+                        {strategy === 'increase' && 'Tăng'}
+                        {strategy === 'keep' && 'Giữ nguyên'}
+                        {strategy === 'decrease' && 'Giảm'}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Biên lợi nhuận
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {['increase', 'keep', 'decrease'].map((strategy) => (
+                      <Badge
+                        key={strategy}
+                        variant={selectedProfitStrategies.includes(strategy) ? 'default' : 'outline'}
+                        className="cursor-pointer"
+                        onClick={() => toggleProfitStrategy(strategy)}
+                      >
+                        {strategy === 'increase' && 'Tăng'}
+                        {strategy === 'keep' && 'Giữ nguyên'}
+                        {strategy === 'decrease' && 'Giảm'}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Products List */}
+              <div className="space-y-4">
+                {getFilteredSuggestions().length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
-                    Chưa có dữ liệu doanh thu theo tháng
+                    Không có sản phẩm nào phù hợp với bộ lọc
                   </div>
                 ) : (
-                  monthlyRevenue.map((month, index) => (
-                    <div
-                      key={index}
-                      className="flex justify-between items-center p-3 bg-blue-50 rounded-lg"
-                    >
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {month.month}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {month.orderCount} đơn hàng
+                  getFilteredSuggestions().map((suggestion) => {
+                    const product = getProductById(suggestion.productId);
+                    if (!product) return null;
+
+                    return (
+                      <div
+                        key={suggestion.productId}
+                        className="flex items-start gap-4 p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
+                      >
+                        <ProductImage
+                          imageUrl={product.image}
+                          productName={product.name}
+                          categoryName={product.category.name}
+                          className="w-20 h-20"
+                        />
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg text-gray-900">
+                            {product.name}
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {suggestion.note}
+                          </p>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            <Badge variant="secondary" className="text-xs">
+                              SL: {suggestion.productionStrategy === 'increase' ? 'Tăng' : suggestion.productionStrategy === 'decrease' ? 'Giảm' : 'Giữ'}
+                            </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              LN: {suggestion.profitMarginStrategy === 'increase' ? 'Tăng' : suggestion.profitMarginStrategy === 'decrease' ? 'Giảm' : 'Giữ'}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-blue-600">
-                          {formatPrice(month.revenue)}
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </CardContent>
           </Card>
-        </div>
+        )}
 
         {/* Top 5 Best Selling Products */}
         <Card>
@@ -433,6 +598,12 @@ function DoanhThuPageContent() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Create Promotion Modal */}
+      <CreatePromotionModal
+        isOpen={isPromotionModalOpen}
+        onClose={() => setIsPromotionModalOpen(false)}
+      />
     </div>
   );
 }

@@ -9,7 +9,7 @@ function getAuthToken(): string | null {
       return authData.token;
     }
   } catch (error) {
-    console.error('Failed to get auth token:', error);
+    // Silent error handling
   }
   return null;
 }
@@ -23,7 +23,7 @@ function getRefreshToken(): string | null {
       return authData.refreshToken;
     }
   } catch (error) {
-    console.error('Failed to get refresh token:', error);
+    // Silent error handling
   }
   return null;
 }
@@ -39,7 +39,7 @@ function updateAuthTokens(newToken: string, newRefreshToken: string): void {
       localStorage.setItem('foodstore_auth', JSON.stringify(authData));
     }
   } catch (error) {
-    console.error('Failed to update auth tokens:', error);
+    // Silent error handling
   }
 }
 
@@ -47,7 +47,6 @@ async function refreshAuthToken(): Promise<boolean> {
   try {
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
-      console.error('No refresh token available');
       return false;
     }
 
@@ -60,7 +59,6 @@ async function refreshAuthToken(): Promise<boolean> {
     });
 
     if (!response.ok) {
-      console.error('Token refresh failed:', response.status);
       return false;
     }
 
@@ -74,7 +72,6 @@ async function refreshAuthToken(): Promise<boolean> {
 
     return false;
   } catch (error) {
-    console.error('Token refresh error:', error);
     return false;
   }
 }
@@ -83,11 +80,14 @@ export interface Product {
   productId: number;
   name: string;
   price: number;
+  cost?: number;
+  defaultDailyLimit?: number | null;
   image: string | null;
   category: {
     categoryId: number;
     name: string;
   };
+  isActive?: boolean;
 }
 
 export interface OrderItem {
@@ -104,6 +104,8 @@ export interface Order {
   customerName: string | null;
   tableNumber: number;
   totalAmount: number;
+  finalAmount?: number;
+  promotionCode?: string | null;
   orderTime: string;
   status: string;
   note?: string | null;
@@ -139,6 +141,84 @@ export interface BankInfo {
   status: string;
 }
 
+export interface Rating {
+  ratingId: number;
+  orderId: number;
+  userId: string;
+  comment: string;
+  rating: number;
+  imageUrls: string[];
+  createdAt: string;
+  orderDetails: {
+    orderId: number;
+    customerName: string;
+    tableNumber: number;
+    totalAmount: number;
+    orderTime: string;
+    status: string;
+    isRated: boolean;
+    items: OrderItem[];
+  };
+}
+
+export interface TodayInventoryItem {
+  productId: number;
+  productName: string;
+  numberRemain: number;
+  dailyLimit: number;
+  priceAtDate: number;
+  costAtDate: number;
+}
+
+export interface BusinessSuggestion {
+  productId: number;
+  performanceTag: 'best_seller' | 'average' | 'slow_seller';
+  productionStrategy: 'increase' | 'keep' | 'decrease';
+  profitMarginStrategy: 'increase' | 'keep' | 'decrease';
+  promotionStrategy: {
+    mainProduct: string | null;
+    comboMainProduct: string | null;
+    sideDish: string | null;
+    drink: string | null;
+  } | null;
+  note: string;
+}
+
+export interface Category {
+  categoryId: number;
+  name: string;
+}
+
+export interface CreatePromotionRequest {
+  promotionType: 'PRODUCT' | 'ORDER';
+  discountPercentage: number;
+  startDate: string;
+  endDate: string;
+  productId?: number | null;
+  categoryId?: number | null;
+  quantity: number;
+  minOrderAmount: number;
+}
+
+export interface PromotionResponse {
+  promotionId: number;
+  code: string;
+  promotionType: 'PRODUCT' | 'ORDER';
+  discountPercentage: number;
+  startDate: string;
+  endDate: string;
+  productId: number | null;
+  productName: string | null;
+  categoryId: number | null;
+  categoryName: string | null;
+  totalQuantity: number;
+  usedCount: number;
+  remainingCount: number;
+  minOrderAmount: number;
+  status: string;
+  createdAt: string;
+}
+
 class ApiService {
   private isRefreshing = false;
   private failedQueue: Array<{
@@ -170,17 +250,13 @@ class ApiService {
 
       // Handle 401 Unauthorized - Token expired
       if (response.status === 401 && !isRetry) {
-        console.log('Token expired, attempting refresh...');
-
         const refreshSuccess = await refreshAuthToken();
 
         if (refreshSuccess) {
-          console.log('Token refreshed successfully, retrying request...');
           // Retry the original request with new token
           return this.fetchWithErrorHandling<T>(url, options, true);
         } else {
           // Refresh failed - logout user
-          console.error('Token refresh failed, logging out...');
           this.handleAuthFailure();
           throw new Error('Session expired. Please login again.');
         }
@@ -208,7 +284,6 @@ class ApiService {
       const data = JSON.parse(text);
       return { data };
     } catch (error) {
-      console.error('API Request failed:', error);
       return {
         data: [] as unknown as T,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -260,14 +335,11 @@ class ApiService {
 
       // Handle 401 Unauthorized - Token expired
       if (response.status === 401 && !isRetry) {
-        console.log('Token expired, attempting refresh...');
         const refreshSuccess = await refreshAuthToken();
 
         if (refreshSuccess) {
-          console.log('Token refreshed successfully, retrying request...');
           return this.fetchWithFormData<T>(url, formData, method, true);
         } else {
-          console.error('Token refresh failed, logging out...');
           this.handleAuthFailure();
           throw new Error('Session expired. Please login again.');
         }
@@ -280,7 +352,6 @@ class ApiService {
       const data = await response.json();
       return { data };
     } catch (error) {
-      console.error('API Request failed:', error);
       return {
         data: {} as T,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -323,6 +394,8 @@ class ApiService {
     productId: number;
     name: string;
     price: number;
+    cost?: number;
+    defaultDailyLimit?: number | null;
     image?: File | string;
     categoryId: number;
   }): Promise<ApiResponse<Product>> {
@@ -332,6 +405,8 @@ class ApiService {
     const product = {
       name: productData.name,
       price: productData.price,
+      cost: productData.cost,
+      defaultDailyLimit: productData.defaultDailyLimit,
       categoryId: productData.categoryId,
     };
 
@@ -372,9 +447,6 @@ class ApiService {
 
   // Employee Management APIs
   async getAllEmployees(): Promise<ApiResponse<Employee[]>> {
-    const token = getAuthToken();
-    console.log('Token for getAllEmployees:', token ? 'exists' : 'missing');
-
     return this.fetchWithErrorHandling<Employee[]>(`${API_BASE_URL}/auth/get-users-by-roles`, {
       method: 'POST',
       body: JSON.stringify(["ADMIN", "STAFF"]),
@@ -392,18 +464,29 @@ class ApiService {
     });
   }
 
-  async updateEmployee(userId: number, employeeData: Partial<Employee>): Promise<ApiResponse<Employee>> {
-    // TODO: Add actual API endpoint when available
-    return this.fetchWithErrorHandling<Employee>(`${API_BASE_URL}/users/update/${userId}`, {
+  async updateEmployee(userId: number, employeeData: { name: string; phoneNumber: string }): Promise<ApiResponse<Employee>> {
+    return this.fetchWithErrorHandling<Employee>(`${API_BASE_URL}/auth/users/${userId}`, {
       method: 'PUT',
-      body: JSON.stringify(employeeData),
+      body: JSON.stringify({
+        name: employeeData.name,
+        phoneNumber: employeeData.phoneNumber,
+      }),
     });
   }
 
   async deleteEmployee(userId: number): Promise<ApiResponse<void>> {
-    // TODO: Add actual API endpoint when available
-    return this.fetchWithErrorHandling<void>(`${API_BASE_URL}/users/delete/${userId}`, {
+    return this.fetchWithErrorHandling<void>(`${API_BASE_URL}/auth/users/${userId}`, {
       method: 'DELETE',
+    });
+  }
+
+  async updatePassword(oldPassword: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
+    return this.fetchWithErrorHandling<{ message: string }>(`${API_BASE_URL}/auth/update-password`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        oldPassword,
+        newPassword,
+      }),
     });
   }
 
@@ -494,6 +577,51 @@ class ApiService {
     );
   }
 
+  // Rating APIs
+  async getAllRatings(): Promise<ApiResponse<{ message: string; total: number; data: Rating[] }>> {
+    return this.fetchWithErrorHandling<{ message: string; total: number; data: Rating[] }>(
+      `${API_BASE_URL}/ratings`
+    );
+  }
+
+  // Inventory APIs
+  async getTodayInventory(): Promise<ApiResponse<TodayInventoryItem[]>> {
+    return this.fetchWithErrorHandling<TodayInventoryItem[]>(`${API_BASE_URL}/inventory/today`);
+  }
+
+  // Business Suggestion API
+  async getBusinessSuggestion(startDate: string, endDate: string): Promise<ApiResponse<BusinessSuggestion[]>> {
+    return this.fetchWithErrorHandling<BusinessSuggestion[]>(`${API_BASE_URL}/ai/business-suggestion`, {
+      method: 'POST',
+      body: JSON.stringify({
+        startDate,
+        endDate,
+      }),
+    });
+  }
+
+  // Promotion APIs
+  async createPromotion(promotionData: CreatePromotionRequest): Promise<ApiResponse<PromotionResponse>> {
+    return this.fetchWithErrorHandling<PromotionResponse>(`${API_BASE_URL}/promotions/generate`, {
+      method: 'POST',
+      body: JSON.stringify(promotionData),
+    });
+  }
+
+  async getAllPromotions(): Promise<ApiResponse<PromotionResponse[]>> {
+    return this.fetchWithErrorHandling<PromotionResponse[]>(`${API_BASE_URL}/promotions`);
+  }
+
+  async deactivatePromotion(code: string): Promise<ApiResponse<PromotionResponse>> {
+    return this.fetchWithErrorHandling<PromotionResponse>(`${API_BASE_URL}/promotions/${code}/deactivate`, {
+      method: 'PUT',
+    });
+  }
+
+  async getAllCategories(): Promise<ApiResponse<Category[]>> {
+    return this.fetchWithErrorHandling<Category[]>(`${API_BASE_URL}/menu/categories`);
+  }
+
   connectToOrdersStream(
     onData: (orders: Order[]) => void,
     onError: (error: string) => void,
@@ -517,8 +645,6 @@ class ApiService {
 
         if (token) {
           headers['Authorization'] = `Bearer ${token}`;
-        } else {
-          console.log('Can not connect to SSE: No auth token found');
         }
 
         const response = await fetch(`${API_BASE_URL}/orders/stream`, {
@@ -529,14 +655,11 @@ class ApiService {
 
         // Handle 401 Unauthorized - Token expired
         if (response.status === 401 && !isRetry) {
-          console.log('SSE auth failed, attempting token refresh...');
           const refreshSuccess = await refreshAuthToken();
 
           if (refreshSuccess) {
-            console.log('Token refreshed, reconnecting SSE...');
             return connect(true);
           } else {
-            console.error('Token refresh failed, logging out...');
             this.handleAuthFailure();
             return;
           }
@@ -550,7 +673,6 @@ class ApiService {
 
         const initialOrders = await this.getAllOrders();
         if (!initialOrders.error) {
-          console.log(initialOrders.data.length, 'orders loaded initially');
           currentOrders = initialOrders.data;
           onData(currentOrders);
         }
@@ -566,12 +688,11 @@ class ApiService {
           throw new Error('Response body is not readable');
         }
 
-        if (debugSse) console.log('SSE: Starting to read stream...');
+
         while (true) {
           const { done, value } = await reader.read();
 
           if (done) {
-            if (debugSse) console.log('Disconnected ');
             break;
           }
 
@@ -584,7 +705,6 @@ class ApiService {
           for (const line of lines) {
             const normalizedLine = line.endsWith('\r') ? line.slice(0, -1) : line;
             const trimmedLine = normalizedLine.trim();
-            if (debugSse) console.log('SSE line:', JSON.stringify(normalizedLine), 'trimmed:', JSON.stringify(trimmedLine));
 
             // Ignore SSE comments/keep-alives
             if (trimmedLine.startsWith(':')) {
@@ -593,41 +713,31 @@ class ApiService {
 
             if (trimmedLine.startsWith('event:')) {
               currentEvent = trimmedLine.substring(6).trim();
-              if (debugSse) console.log('SSE: SET currentEvent =', JSON.stringify(currentEvent));
             } else if (trimmedLine.startsWith('data:')) {
               // Per SSE spec, after ":" there may be one optional leading space.
               const nextChunk = trimmedLine.substring(5).replace(/^ /, '');
               currentData = currentData ? `${currentData}\n${nextChunk}` : nextChunk;
-              if (debugSse) console.log('SSE: APPEND currentData =', currentData.substring(0, 50) + '...');
             } else if (trimmedLine === '') {
-              if (debugSse) console.log('SSE: Empty line. BEFORE processing - currentEvent:', JSON.stringify(currentEvent), 'hasData:', !!currentData);
               // Blank line indicates end of an SSE "message".
               // If server didn't send an explicit event type, default to 'message'.
               if (currentData) {
                 const eventTypeToProcess = currentEvent || 'message';
-                if (debugSse) console.log('SSE: ✅ PROCESSING - event:', eventTypeToProcess, 'dataLength:', currentData.length);
                 processSSEMessage(eventTypeToProcess, currentData, currentOrders, onData, onError);
-                if (debugSse) console.log('SSE: ✅ DONE processing, resetting...');
                 // Only reset after successful processing
                 currentEvent = '';
                 currentData = '';
-              } else {
-                if (debugSse) console.log('SSE: ❌ SKIPPING - event:', JSON.stringify(currentEvent), 'hasData:', !!currentData, '(keeping for next line)');
-                // Don't reset - keep accumulating until we have both event and data
               }
             }
           }
         }
       } catch (error: unknown) {
         if (error instanceof Error && error.name === 'AbortError') {
-          console.log('Aborted');
           return;
         }
         onError(error instanceof Error ? error.message : 'Connection error');
 
         if (shouldReconnect) {
           reconnectTimeout = setTimeout(() => {
-            console.log('Reconnect');
             connect();
           }, 3000);
         }
@@ -704,8 +814,6 @@ class ApiService {
             break;
         }
       } catch (error) {
-        console.error('SSE processSSEMessage ERROR:', error);
-        console.error('Event type:', eventType, 'Data:', data.substring(0, 100));
         onErrorCallback('Failed to parse server data');
       }
     };
@@ -719,7 +827,6 @@ class ApiService {
       }
       if (controller) {
         controller.abort();
-        console.log('SSE closed');
       }
     };
   }
@@ -749,13 +856,11 @@ export const parseOrderTime = (dateTimeString: string): Date => {
     const date = new Date(dateWithTimezone);
 
     if (isNaN(date.getTime())) {
-      console.warn('Invalid date string:', dateTimeString);
       return new Date();
     }
 
     return date;
   } catch (error) {
-    console.error('Error parsing date:', dateTimeString, error);
     return new Date();
   }
 };
@@ -771,7 +876,6 @@ export const formatDateTime = (dateTimeString: string): string => {
       minute: '2-digit',
     });
   } catch (error) {
-    console.error('Error formatting date:', dateTimeString, error);
     return 'Invalid Date';
   }
 };

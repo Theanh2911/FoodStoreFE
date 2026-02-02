@@ -13,6 +13,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { useAuth } from "@/contexts/auth-context";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useInventory } from "@/contexts/inventory-context";
 
 export default function DoUongPage() {
   return (
@@ -31,6 +32,7 @@ function DoUongPageContent() {
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
+  const { inventory } = useInventory();
 
   const drinkCategories = ["Cà phê", "Trà", "Nước ép", "Sinh tố", "Nước tự nhiên", "Bia", "Nước ngọt"];
   const isAdmin = user?.role === "ADMIN";
@@ -57,8 +59,6 @@ function DoUongPageContent() {
 
   const handleAddItem = async (formData: AddItemFormData) => {
     try {
-      console.log("📝 Form data received:", formData);
-
       // Prepare data for API call
       const productData = {
         name: formData.name,
@@ -67,29 +67,23 @@ function DoUongPageContent() {
         image: formData.image || formData.imageUrl || "", // Use uploaded file or image URL
       };
 
-      console.log("🔄 Sending to API:", productData);
-
       // Call the backend API to add the product
       const addResult = await apiService.addProduct(productData);
 
       if (addResult.error) {
-        console.error("❌ Failed to add product:", addResult.error);
         toast.error(`Lỗi khi thêm đồ uống: ${addResult.error}`);
         return;
       }
 
-      console.log("✅ Product added successfully:", addResult.data);
       toast.success("Đã thêm đồ uống mới thành công!");
 
       // Refresh the product list from backend
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.DRINKS);
       if (!refreshResult.error) {
         setDrinkItems(refreshResult.data);
-        console.log("🔄 Product list refreshed");
       }
 
     } catch (error) {
-      console.error("💥 Error adding item:", error);
       toast.error("Có lỗi xảy ra khi thêm đồ uống. Vui lòng thử lại.");
     }
   };
@@ -101,40 +95,34 @@ function DoUongPageContent() {
 
   const handleEditItem = async (formData: UpdateFormData) => {
     try {
-      console.log("📝 Edit form data received:", formData);
-
       const productData = {
         productId: formData.productId,
         name: formData.name || editingProduct?.name || "",
         price: formData.price ? parseFloat(formData.price.replace(/,/g, '')) : editingProduct?.price || 0,
+        cost: formData.cost ? parseFloat(formData.cost.replace(/,/g, '')) : editingProduct?.cost || 0,
+        defaultDailyLimit: formData.defaultDailyLimit ? parseInt(formData.defaultDailyLimit) : (editingProduct?.defaultDailyLimit ?? null),
         image: formData.image || formData.imageUrl || editingProduct?.image || "",
         categoryId: formData.categoryId || editingProduct?.category.categoryId || CATEGORY_IDS.DRINKS,
       };
 
-      console.log("🔄 Sending update to API:", productData);
-
       const updateResult = await apiService.updateProduct(formData.productId, productData);
 
       if (updateResult.error) {
-        console.error("❌ Failed to update product:", updateResult.error);
         toast.error(`Lỗi khi cập nhật đồ uống: ${updateResult.error}`);
         return;
       }
 
-      console.log("✅ Product updated successfully:", updateResult.data);
       toast.success("Đã cập nhật đồ uống thành công!");
 
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.DRINKS);
       if (!refreshResult.error) {
         setDrinkItems(refreshResult.data);
-        console.log("🔄 Product list refreshed");
       }
 
       setIsEditModalOpen(false);
       setEditingProduct(null);
 
     } catch (error) {
-      console.error("💥 Error updating item:", error);
       toast.error("Có lỗi xảy ra khi cập nhật đồ uống. Vui lòng thử lại.");
     }
   };
@@ -153,29 +141,23 @@ function DoUongPageContent() {
     }
 
     try {
-      console.log("🗑️ Deleting product:", productId);
-
       // Call the backend API to delete the product
       const deleteResult = await apiService.deleteProduct(productId);
 
       if (deleteResult.error) {
-        console.error("❌ Failed to delete product:", deleteResult.error);
         toast.error(`Lỗi khi xóa đồ uống: ${deleteResult.error}`);
         return;
       }
 
-      console.log("✅ Product deleted successfully");
       toast.success("Đã xóa đồ uống thành công!");
 
       // Refresh the product list from backend
       const refreshResult = await apiService.getProductsByCategory(CATEGORY_IDS.DRINKS);
       if (!refreshResult.error) {
         setDrinkItems(refreshResult.data);
-        console.log("🔄 Product list refreshed");
       }
 
     } catch (error) {
-      console.error("💥 Error deleting item:", error);
       toast.error("Có lỗi xảy ra khi xóa đồ uống. Vui lòng thử lại.");
     }
   };
@@ -237,28 +219,48 @@ function DoUongPageContent() {
                 Chưa có đồ uống nào. Hãy thêm đồ uống mới!
               </div>
             ) : (
-              drinkItems.map((item) => (
-                <Card key={item.productId} className="hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <ProductImage
-                          imageUrl={item.image}
-                          productName={item.name}
-                          categoryName={item.category.name}
-                          className="w-12 h-12"
-                        />
-                        <div>
-                          <CardTitle className="text-lg">{item.name}</CardTitle>
-                          <p className="text-sm text-gray-500">{item.category.name}</p>
+              drinkItems.map((item) => {
+                const remainingQuantity = inventory[item.productId];
+                const isOutOfStock = remainingQuantity !== undefined && remainingQuantity !== null && remainingQuantity === 0;
+                const displayText = remainingQuantity !== undefined && remainingQuantity !== null 
+                  ? (isOutOfStock ? "Hết hàng" : `Còn lại: ${remainingQuantity}`) 
+                  : "Còn nguyên";
+                const badgeClass = isOutOfStock 
+                  ? "text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded whitespace-nowrap"
+                  : "text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded whitespace-nowrap";
+                
+                return (
+                  <Card key={item.productId} className="hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center space-x-3 flex-1">
+                          <ProductImage
+                            imageUrl={item.image}
+                            productName={item.name}
+                            categoryName={item.category.name}
+                            className="w-12 h-12"
+                          />
+                          <div className="flex-1">
+                            <CardTitle className="text-lg">{item.name}</CardTitle>
+                            <p className="text-sm text-gray-500">{item.category.name}</p>
+                          </div>
+                        </div>
+                        <div className={badgeClass}>
+                          {displayText}
                         </div>
                       </div>
-                    </div>
-                  </CardHeader>
+                    </CardHeader>
                   <CardContent className="pt-0">
                     <div className="flex items-center justify-between">
-                      <div className="text-xl font-bold text-green-600">
-                        {formatPrice(item.price)}
+                      <div>
+                        <div className="text-xl font-bold text-green-600">
+                          {formatPrice(item.price)}
+                        </div>
+                        {item.cost !== undefined && item.cost > 0 && (
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            Chi phí: {formatPrice(item.cost)}
+                          </div>
+                        )}
                       </div>
                       {isAdmin && (
                         <div className="flex space-x-2">
@@ -284,7 +286,8 @@ function DoUongPageContent() {
                     </div>
                   </CardContent>
                 </Card>
-              ))
+                );
+              })
             )}
           </div>
         )}

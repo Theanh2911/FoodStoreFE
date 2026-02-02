@@ -10,10 +10,11 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, CreditCard, Star, UtensilsCrossed, Coffee, Plus, ShoppingCart, User, LogOut, Users, Building2 } from "lucide-react";
+import { ChevronDown, CreditCard, Star, UtensilsCrossed, Coffee, Plus, ShoppingCart, User, LogOut, Users, Building2, KeyRound } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { EmployeeDialog } from "@/components/employee-dialog";
 import { BankingInfoDialog } from "@/components/banking-info-dialog";
+import { ChangePasswordDialog } from "@/components/change-password-dialog";
 
 export function DashboardNav() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export function DashboardNav() {
   const [selectedMenuItem, setSelectedMenuItem] = React.useState<string | null>(null);
   const [showEmployeeDialog, setShowEmployeeDialog] = React.useState(false);
   const [showBankingDialog, setShowBankingDialog] = React.useState(false);
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = React.useState(false);
 
   const handleMenuItemClick = (item: string, route: string) => {
     setSelectedMenuItem(item);
@@ -36,8 +38,7 @@ export function DashboardNav() {
   };
 
   const handleReviewClick = () => {
-    console.log("Navigating to reviews page");
-    // Add navigation logic here when reviews page is created
+    router.push("/danh-gia");
   };
 
   return (
@@ -178,6 +179,17 @@ export function DashboardNav() {
               </DropdownMenuItem>
             )}
             
+            {user?.role === "ADMIN" && <DropdownMenuSeparator />}
+            
+            {/* Đổi mật khẩu - Available for both ADMIN and STAFF */}
+            <DropdownMenuItem 
+              className="cursor-pointer flex items-center space-x-2 hover:bg-gray-50 py-2"
+              onClick={() => setShowChangePasswordDialog(true)}
+            >
+              <KeyRound className="h-4 w-4" />
+              <span>Đổi mật khẩu</span>
+            </DropdownMenuItem>
+            
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="cursor-pointer flex items-center space-x-2 hover:bg-red-50 text-red-600 py-2"
@@ -200,6 +212,7 @@ export function DashboardNav() {
       {/* Dialogs */}
       <EmployeeDialog open={showEmployeeDialog} onOpenChange={setShowEmployeeDialog} />
       <BankingInfoDialog open={showBankingDialog} onOpenChange={setShowBankingDialog} />
+      <ChangePasswordDialog open={showChangePasswordDialog} onOpenChange={setShowChangePasswordDialog} />
     </nav>
   );
 }
