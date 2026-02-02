@@ -104,6 +104,8 @@ export interface Order {
   customerName: string | null;
   tableNumber: number;
   totalAmount: number;
+  finalAmount?: number;
+  promotionCode?: string | null;
   orderTime: string;
   status: string;
   note?: string | null;

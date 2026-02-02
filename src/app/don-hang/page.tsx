@@ -172,7 +172,11 @@ function DonHangPageContent() {
   // formatDateTime is now imported from api.ts
 
   const calculateOrderTotal = (order: Order) => {
-    return order.items.reduce((total, item) => total + (item.productPrice * item.quantity), 0);
+    // If order has promotionCode, use finalAmount instead of totalAmount
+    if (order.promotionCode && order.finalAmount !== undefined) {
+      return order.finalAmount;
+    }
+    return order.totalAmount;
   };
 
   const handleStatusChange = (order: Order, newStatus: string, actionText: string) => {
@@ -419,6 +423,11 @@ function DonHangPageContent() {
                         <span className="text-xl font-bold text-green-600">
                           {formatPrice(calculateOrderTotal(order))}
                         </span>
+                        {order.promotionCode && (
+                          <span className="text-sm text-blue-600 font-medium mt-1">
+                            Mã giảm giá: {order.promotionCode}
+                          </span>
+                        )}
                       </div>
                       <div className="flex justify-end sm:justify-start">
                         {getStatusActionButton(order)}
@@ -518,11 +527,18 @@ function DonHangPageContent() {
               </div>
 
               {/* Total Amount */}
-              <div className="flex justify-between items-center pt-3 border-t-2 border-gray-200">
-                <span className="text-lg font-bold text-gray-700">Tổng cộng:</span>
-                <span className="text-2xl font-bold text-green-600">
-                  {formatPrice(calculateOrderTotal(paymentSuccessModal.order))}
-                </span>
+              <div className="flex flex-col pt-3 border-t-2 border-gray-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-bold text-gray-700">Tổng cộng:</span>
+                  <span className="text-2xl font-bold text-green-600">
+                    {formatPrice(calculateOrderTotal(paymentSuccessModal.order))}
+                  </span>
+                </div>
+                {paymentSuccessModal.order.promotionCode && (
+                  <div className="text-sm text-blue-600 font-medium mt-2 text-right">
+                    Mã giảm giá: {paymentSuccessModal.order.promotionCode}
+                  </div>
+                )}
               </div>
             </div>
           )}
