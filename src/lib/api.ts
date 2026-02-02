@@ -645,8 +645,6 @@ class ApiService {
 
         if (token) {
           headers['Authorization'] = `Bearer ${token}`;
-        } else {
-          console.log('Can not connect to SSE: No auth token found');
         }
 
         const response = await fetch(`${API_BASE_URL}/orders/stream`, {
@@ -657,14 +655,11 @@ class ApiService {
 
         // Handle 401 Unauthorized - Token expired
         if (response.status === 401 && !isRetry) {
-          console.log('SSE auth failed, attempting token refresh...');
           const refreshSuccess = await refreshAuthToken();
 
           if (refreshSuccess) {
-            console.log('Token refreshed, reconnecting SSE...');
             return connect(true);
           } else {
-            console.error('Token refresh failed, logging out...');
             this.handleAuthFailure();
             return;
           }
@@ -678,7 +673,6 @@ class ApiService {
 
         const initialOrders = await this.getAllOrders();
         if (!initialOrders.error) {
-          console.log(initialOrders.data.length, 'orders loaded initially');
           currentOrders = initialOrders.data;
           onData(currentOrders);
         }
@@ -694,12 +688,11 @@ class ApiService {
           throw new Error('Response body is not readable');
         }
 
-        if (debugSse) console.log('SSE: Starting to read stream...');
+
         while (true) {
           const { done, value } = await reader.read();
 
           if (done) {
-            if (debugSse) console.log('Disconnected ');
             break;
           }
 
@@ -712,7 +705,6 @@ class ApiService {
           for (const line of lines) {
             const normalizedLine = line.endsWith('\r') ? line.slice(0, -1) : line;
             const trimmedLine = normalizedLine.trim();
-            if (debugSse) console.log('SSE line:', JSON.stringify(normalizedLine), 'trimmed:', JSON.stringify(trimmedLine));
 
             // Ignore SSE comments/keep-alives
             if (trimmedLine.startsWith(':')) {
@@ -721,41 +713,31 @@ class ApiService {
 
             if (trimmedLine.startsWith('event:')) {
               currentEvent = trimmedLine.substring(6).trim();
-              if (debugSse) console.log('SSE: SET currentEvent =', JSON.stringify(currentEvent));
             } else if (trimmedLine.startsWith('data:')) {
               // Per SSE spec, after ":" there may be one optional leading space.
               const nextChunk = trimmedLine.substring(5).replace(/^ /, '');
               currentData = currentData ? `${currentData}\n${nextChunk}` : nextChunk;
-              if (debugSse) console.log('SSE: APPEND currentData =', currentData.substring(0, 50) + '...');
             } else if (trimmedLine === '') {
-              if (debugSse) console.log('SSE: Empty line. BEFORE processing - currentEvent:', JSON.stringify(currentEvent), 'hasData:', !!currentData);
               // Blank line indicates end of an SSE "message".
               // If server didn't send an explicit event type, default to 'message'.
               if (currentData) {
                 const eventTypeToProcess = currentEvent || 'message';
-                if (debugSse) console.log('SSE: ✅ PROCESSING - event:', eventTypeToProcess, 'dataLength:', currentData.length);
                 processSSEMessage(eventTypeToProcess, currentData, currentOrders, onData, onError);
-                if (debugSse) console.log('SSE: ✅ DONE processing, resetting...');
                 // Only reset after successful processing
                 currentEvent = '';
                 currentData = '';
-              } else {
-                if (debugSse) console.log('SSE: ❌ SKIPPING - event:', JSON.stringify(currentEvent), 'hasData:', !!currentData, '(keeping for next line)');
-                // Don't reset - keep accumulating until we have both event and data
               }
             }
           }
         }
       } catch (error: unknown) {
         if (error instanceof Error && error.name === 'AbortError') {
-          console.log('Aborted');
           return;
         }
         onError(error instanceof Error ? error.message : 'Connection error');
 
         if (shouldReconnect) {
           reconnectTimeout = setTimeout(() => {
-            console.log('Reconnect');
             connect();
           }, 3000);
         }
@@ -832,8 +814,6 @@ class ApiService {
             break;
         }
       } catch (error) {
-        console.error('SSE processSSEMessage ERROR:', error);
-        console.error('Event type:', eventType, 'Data:', data.substring(0, 100));
         onErrorCallback('Failed to parse server data');
       }
     };
@@ -847,7 +827,6 @@ class ApiService {
       }
       if (controller) {
         controller.abort();
-        console.log('SSE closed');
       }
     };
   }
